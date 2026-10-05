@@ -29,6 +29,7 @@ object BpmDetector {
     const val ENV_RATE = 200 // curve samples per second
     private const val MAX_SECONDS = 720
     private const val FIT_SECONDS = 240
+    private const val MAX_WALL_MS = 45_000L // stop decoding after this long, use what we have
     private const val MIN_BPM = 70.0
     private const val MAX_BPM = 180.0
 
@@ -84,6 +85,7 @@ object BpmDetector {
             var hop = sampleRate / ENV_RATE.toDouble() // samples per curve frame (fractional)
             var samples = 0L
 
+            val started = System.currentTimeMillis()
             val maxFrames = MAX_SECONDS * ENV_RATE
             val full = DoubleArray(maxFrames + 1) // energy of the sharp part
             val low = DoubleArray(maxFrames + 1) // energy of the bass part
@@ -100,7 +102,9 @@ object BpmDetector {
             val info = MediaCodec.BufferInfo()
             var inputDone = false
             var outputDone = false
-            while (!outputDone && frame < maxFrames) {
+            while (!outputDone && frame < maxFrames &&
+                System.currentTimeMillis() - started < MAX_WALL_MS
+            ) {
                 if (!inputDone) {
                     val i = codec.dequeueInputBuffer(10_000)
                     if (i >= 0) {

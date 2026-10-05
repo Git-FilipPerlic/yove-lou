@@ -8,8 +8,8 @@ import java.nio.ByteOrder
 import java.util.concurrent.Executors
 
 class MainActivity : FlutterActivity() {
-    // Decoding a song takes a moment, so it runs off the main thread.
-    private val worker = Executors.newSingleThreadExecutor()
+    // Decoding takes a moment, so it runs off the main thread (one thread per deck).
+    private val worker = Executors.newFixedThreadPool(2)
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
