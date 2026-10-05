@@ -234,95 +234,108 @@ class _TopIcon extends StatelessWidget {
   }
 }
 
-/// Quick guide to every control. Opened with the "?" button.
+/// Quick guide to every control, as small cards in two columns.
+/// Opened with the "?" button.
 Future<void> showHelp(BuildContext context) {
-  const rows = [
-    (
-      'Track name',
-      'Tap to open the file browser. Tap songs to tick them, then ADD TO the deck playlist. Hold a song to load it right now.'
-    ),
-    (
-      'PLAYLISTS (hold)',
-      'Hold the button on the mixer to see the playlists of both decks. Tap a song to load it, drag to reorder, X to remove. When a song ends, the next one is loaded and ready.'
-    ),
-    ('Hold deck / jog', 'Menu: loop, set cue, reset tempo, clear pads, eject.'),
-    (
-      'Waveform',
-      'Top strip: close-up around the playhead with the beat grid (thick line = every 4th beat). Drag it sideways to scrub. Bar below: the whole song, tap or drag to jump.'
-    ),
-    ('PLAY', 'Start or pause the track.'),
-    (
-      'SYNC',
-      'Makes this deck follow the tempo of the other deck. If both are playing, the beats are also lined up. Stays on until you press it again or move this tempo fader. A 64 BPM song follows a 128 BPM one at half time.'
-    ),
-    (
-      'CUE',
-      'When paused: set the cue point here. When playing: jump back to the cue and stop. HOLD it to preview: the song plays from the cue and snaps back when you let go. Press PLAY while holding to keep playing.'
-    ),
-    (
-      'IN / OUT',
-      'Loop. First press sets the loop start, second sets the end and loops, third clears it.'
-    ),
-    (
-      '1 2 3 4 pads',
-      'Tap an empty pad to save this spot, tap a saved pad to jump there, hold to clear it.'
-    ),
-    ('Jog wheel', 'Drag in a circle to scrub forward and back.'),
-    (
-      'Tempo fader',
-      'Push up for faster, down for slower. Double-tap to reset to normal speed.'
-    ),
-    (
-      'A / M / B faders',
-      'Channel volume for A, master volume, channel volume for B.'
-    ),
-    ('Crossfader', 'Slide between deck A and deck B. Double-tap to centre.'),
-    ('Palette icon', 'Cycle the look: Grunge, Classic, Pearl & Peach.'),
+  const cards = [
+    (Icons.folder_open_rounded, 'Add songs',
+        'Tap the track name. Tap songs to tick, then ADD. Hold a song to load it now.'),
+    (Icons.queue_music_rounded, 'Playlists',
+        'Hold PLAYLISTS on the mixer. Tap to load, drag to reorder, X to remove.'),
+    (Icons.touch_app_rounded, 'Deck menu',
+        'Hold the deck: cue, loop, tempo, BPM x2 or /2, eject.'),
+    (Icons.graphic_eq_rounded, 'Waveform',
+        'Top: close-up with beat grid, drag to scrub. Bottom: whole song, tap to jump.'),
+    (Icons.flag_rounded, 'CUE',
+        'Paused: set cue. Playing: back to cue. Hold: preview, snaps back on release.'),
+    (Icons.sync_rounded, 'SYNC',
+        'Follows the other deck\'s tempo and lines up beats. Off when you move the fader.'),
+    (Icons.repeat_rounded, 'IN / OUT',
+        'First press sets the start, second sets the end, third clears the loop.'),
+    (Icons.grid_view_rounded, 'Pads 1-4',
+        'Tap empty: save the spot. Tap saved: jump. Hold: clear.'),
+    (Icons.album_rounded, 'Jog',
+        'Drag in a circle to scrub forward and back.'),
+    (Icons.tune_rounded, 'Faders',
+        'Tempo: up is faster, double-tap resets. A / M / B: volumes. Crossfader: double-tap centres.'),
   ];
   return showDialog<void>(
     context: context,
     builder: (ctx) => Dialog(
       backgroundColor: YL.card,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(YL.radius)),
       child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('How to use yove lou',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
-                      color: YL.ink)),
-              const SizedBox(height: 12),
-              for (final (title, text) in rows)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(title,
-                          style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                              color: YL.ink)),
-                      Text(text,
-                          style: TextStyle(fontSize: 12, color: YL.inkSoft)),
-                    ],
-                  ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text('How to use yove lou',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                          color: YL.ink)),
                 ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
+                TextButton(
                     onPressed: () => Navigator.of(ctx).pop(),
                     child: const Text('Got it')),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Flexible(
+              child: SingleChildScrollView(
+                child: LayoutBuilder(builder: (context, c) {
+                  const gap = 8.0;
+                  final w = (c.maxWidth - gap) / 2;
+                  return Wrap(
+                    spacing: gap,
+                    runSpacing: gap,
+                    children: [
+                      for (final (icon, title, text) in cards)
+                        Container(
+                          width: w,
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: YL.bg,
+                            borderRadius: BorderRadius.circular(YL.r(12)),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(icon, size: 20, color: YL.deckA),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(title,
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 13,
+                                            color: YL.ink)),
+                                    const SizedBox(height: 2),
+                                    Text(text,
+                                        style: TextStyle(
+                                            fontSize: 11.5,
+                                            height: 1.25,
+                                            color: YL.inkSoft)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  );
+                }),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     ),

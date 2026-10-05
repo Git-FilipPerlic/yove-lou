@@ -173,8 +173,10 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> {
     final deck = widget.deck;
     final added = deck.addToPlaylist(tracks);
     setState(_selected.clear);
-    final msg =
-        'Added $added to deck ${deck.name} playlist (${deck.playlist.length} total)';
+    final skipped = tracks.length - added;
+    final msg = 'Added $added to deck ${deck.name} playlist '
+        '(${deck.playlist.length} total)'
+        '${skipped > 0 ? ' - $skipped already there' : ''}';
     if (loadFirst) {
       _loadFile(File(tracks.first.path));
     } else {
