@@ -13,6 +13,7 @@ Design: three themes, switched with the palette button on the mixer.
 - [x] Two independent decks, each with its own audio player
 - [x] Play / pause
 - [x] CUE (CDJ behaviour): paused = set the cue point here ("SET"), playing = jump back to the cue and pause ("BACK")
+- [x] Hold CUE to preview: plays from the cue while held, snaps back on release; press PLAY while holding to keep playing
 - [x] Jog wheel: drag in a circle to scrub; rotates with the song (33 rpm look)
 - [x] Waveform strip with playhead, tap / drag to seek (placeholder wave, not yet real audio data)
 - [x] Elapsed + remaining time
@@ -51,18 +52,17 @@ Design: three themes, switched with the palette button on the mixer.
 Loaded song, cue point, hot cues, loops, fader positions. All reset when the app closes.
 
 ## Next (suggested order)
-1. Hold CUE to preview (CDJ trick: hold = play from cue, release = jump back)
-2. Real waveform from the audio file (decode peaks in an isolate) + zoomed scrolling waveform
-3. BPM detection + beat grid, show BPM per deck
-4. SYNC (match tempo to the other deck) and master-tempo / key lock
-5. Beat loops (1/2/4/8/16 beats) and loop roll
-6. Library extras: search, sort by BPM / key / title, song length in the list, deck menu shortcut to the playlists
-7. Save loaded song, cues / hot cues / loops per track (local DB)
-8. 3-band EQ (hi / mid / low) + kill switches per channel (Android equalizer or custom DSP)
-9. Filter knob (HPF / LPF sweep) per channel
-10. Level meters per channel and master
-11. Cue-to-headphones (needs split output: phone speaker/BT = master, wired headphones = cue)
-12. Option to autoplay the next playlist song
+1. Real waveform from the audio file (decode peaks in an isolate) + zoomed scrolling waveform
+2. BPM detection + beat grid, show BPM per deck
+3. SYNC (match tempo to the other deck) and master-tempo / key lock
+4. Beat loops (1/2/4/8/16 beats) and loop roll
+5. Library extras: search, sort by BPM / key / title, song length in the list, deck menu shortcut to the playlists
+6. Save loaded song, cues / hot cues / loops per track (local DB)
+7. 3-band EQ (hi / mid / low) + kill switches per channel (Android equalizer or custom DSP)
+8. Filter knob (HPF / LPF sweep) per channel
+9. Level meters per channel and master
+10. Cue-to-headphones (needs split output: phone speaker/BT = master, wired headphones = cue)
+11. Option to autoplay the next playlist song
 
 ## Researched pro-player features (backlog)
 **Transport:** play/pause, CUE, cue-preview (hold CUE), previous/next track, search (fast scan), jog modes (vinyl / CDJ), slip mode, reverse, brake/start effect on stop/play.

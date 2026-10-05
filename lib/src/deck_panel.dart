@@ -266,7 +266,8 @@ class _TransportButtons extends StatelessWidget {
             sub: deck.playing ? 'back' : 'set',
             color: YL.cueOrange,
             filled: false,
-            onTap: deck.cuePress,
+            onPressStart: deck.cueDown,
+            onPressEnd: deck.cueUp,
           ),
         ),
         const SizedBox(height: 6),
@@ -302,7 +303,9 @@ class _PillButton extends StatelessWidget {
     this.icon,
     required this.color,
     required this.filled,
-    required this.onTap,
+    this.onTap,
+    this.onPressStart,
+    this.onPressEnd,
   });
 
   final String? label;
@@ -310,7 +313,11 @@ class _PillButton extends StatelessWidget {
   final IconData? icon;
   final Color color;
   final bool filled;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+
+  /// Press / release hooks, for buttons that care about being held (CUE).
+  final VoidCallback? onPressStart;
+  final VoidCallback? onPressEnd;
 
   @override
   Widget build(BuildContext context) {
@@ -322,7 +329,10 @@ class _PillButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(YL.r(14)),
         child: InkWell(
           borderRadius: BorderRadius.circular(YL.r(14)),
-          onTap: onTap,
+          onTap: onTap ?? () {},
+          onTapDown: onPressStart == null ? null : (_) => onPressStart!(),
+          onTapUp: onPressEnd == null ? null : (_) => onPressEnd!(),
+          onTapCancel: onPressEnd,
           child: Center(
             child: icon != null
                 ? Icon(icon, color: fg, size: 30)

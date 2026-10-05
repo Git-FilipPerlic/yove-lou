@@ -246,7 +246,7 @@ Future<void> showHelp(BuildContext context) {
     ('PLAY', 'Start or pause the track.'),
     (
       'CUE',
-      'When paused: set the cue point here. When playing: jump back to the cue and stop.'
+      'When paused: set the cue point here. When playing: jump back to the cue and stop. HOLD it to preview: the song plays from the cue and snaps back when you let go. Press PLAY while holding to keep playing.'
     ),
     (
       'IN / OUT',

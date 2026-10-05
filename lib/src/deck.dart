@@ -103,6 +103,8 @@ class Deck extends ChangeNotifier {
   }
 
   Future<void> eject() async {
+    _previewTimer?.cancel();
+    _previewing = false;
     await _player.stop();
     path = null;
     title = '';
@@ -178,6 +180,12 @@ class Deck extends ChangeNotifier {
 
   void togglePlay() {
     if (!isLoaded) return;
+    if (_previewing) {
+      // PLAY pressed while CUE is held: keep playing after CUE is released.
+      _previewing = false;
+      notifyListeners();
+      return;
+    }
     if (_player.playing) {
       _player.pause();
     } else {
@@ -186,9 +194,13 @@ class Deck extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// CDJ behaviour: while playing -> return to cue and pause;
-  /// while paused -> set the cue point here.
-  void cuePress() {
+  Timer? _previewTimer;
+  bool _previewing = false;
+
+  /// CUE pressed. CDJ behaviour: while playing -> return to cue and pause;
+  /// while paused -> set the cue point here. If the button is still held
+  /// a moment later, the song plays from the cue until [cueUp].
+  void cueDown() {
     if (!isLoaded) return;
     if (_player.playing) {
       _player.pause();
@@ -196,6 +208,22 @@ class Deck extends ChangeNotifier {
     } else {
       cue = position.value;
     }
+    notifyListeners();
+    _previewTimer?.cancel();
+    _previewTimer = Timer(const Duration(milliseconds: 180), () {
+      _previewing = true;
+      _player.play();
+      notifyListeners();
+    });
+  }
+
+  /// CUE released: stop the preview and snap back to the cue point.
+  void cueUp() {
+    _previewTimer?.cancel();
+    if (!_previewing) return;
+    _previewing = false;
+    _player.pause();
+    _player.seek(cue ?? Duration.zero);
     notifyListeners();
   }
 
@@ -319,6 +347,7 @@ class Deck extends ChangeNotifier {
 
   @override
   void dispose() {
+    _previewTimer?.cancel();
     for (final s in _subs) {
       s.cancel();
     }
