@@ -298,6 +298,17 @@ class Deck extends ChangeNotifier {
     return added;
   }
 
+  /// Replaces the whole queue (loading a saved set). What is on the deck
+  /// keeps playing; it just stays marked if it is in the new queue.
+  void setPlaylist(List<Track> tracks) {
+    playlist
+      ..clear()
+      ..addAll(tracks);
+    final qi = playlist.indexWhere((t) => t.path == path);
+    currentIndex = qi < 0 ? null : qi;
+    _playlistChanged();
+  }
+
   /// Puts back the playlist saved on the device (at app start).
   void restorePlaylist(List<Track> saved) {
     playlist
@@ -333,6 +344,16 @@ class Deck extends ChangeNotifier {
     playlist.insert(newIndex, playlist.removeAt(oldIndex));
     if (current != null) currentIndex = playlist.indexOf(current);
     _playlistChanged();
+  }
+
+  /// Moves song [i] right after the one on the deck (to the top when
+  /// nothing from the queue is on the deck), so it plays next.
+  void playNext(int i) {
+    final cur = currentIndex;
+    if (i == cur) return;
+    final target = cur == null ? 0 : cur + 1;
+    final at = i < target ? target - 1 : target;
+    if (at != i) reorderPlaylist(i, at);
   }
 
   void clearPlaylist() {

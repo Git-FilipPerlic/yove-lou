@@ -64,6 +64,66 @@ class Store {
     jsonEncode({'crossfader': crossfader, 'master': master}),
   );
 
+  // ------------------------------------------------------------------ sets
+  // A "set" is a named pair of playlists (deck A + deck B).
+
+  static Map<String, dynamic> _sets() {
+    final raw = _p?.getString('sets');
+    if (raw == null) return {};
+    try {
+      return jsonDecode(raw) as Map<String, dynamic>;
+    } catch (_) {
+      return {};
+    }
+  }
+
+  static List<String> setNames() =>
+      _sets().keys.toList()
+        ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+  /// How many songs a saved set holds on each deck (A, B).
+  static (int, int) setCounts(String name) {
+    final s = _sets()[name];
+    if (s is! Map) return (0, 0);
+    return (
+      (s['A'] is List ? (s['A'] as List).length : 0),
+      (s['B'] is List ? (s['B'] as List).length : 0),
+    );
+  }
+
+  static void saveSet(String name, List<Track> a, List<Track> b) {
+    List<Map<String, String>> enc(List<Track> l) => [
+          for (final t in l) {'path': t.path, 'name': t.name}
+        ];
+    final all = _sets();
+    all[name] = {'A': enc(a), 'B': enc(b)};
+    _p?.setString('sets', jsonEncode(all));
+  }
+
+  static void deleteSet(String name) {
+    final all = _sets()..remove(name);
+    _p?.setString('sets', jsonEncode(all));
+  }
+
+  /// The songs of a saved set; files deleted since are dropped.
+  static (List<Track>, List<Track>)? loadSet(String name) {
+    final s = _sets()[name];
+    if (s is! Map) return null;
+    List<Track> dec(Object? raw) {
+      final out = <Track>[];
+      if (raw is! List) return out;
+      for (final m in raw) {
+        try {
+          final path = m['path'] as String;
+          if (File(path).existsSync()) out.add(Track(path, m['name'] as String));
+        } catch (_) {}
+      }
+      return out;
+    }
+
+    return (dec(s['A']), dec(s['B']));
+  }
+
   /// Saved songs for a deck. Files that were deleted since are dropped.
   static List<Track> loadPlaylist(String deckName) {
     final raw = _p?.getStringList('playlist_$deckName') ?? const [];

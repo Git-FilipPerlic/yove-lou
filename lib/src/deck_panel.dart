@@ -444,6 +444,7 @@ class _TransportButtons extends StatelessWidget {
     return Column(
       children: [
         Expanded(
+          flex: 3,
           // Sub-label tells you what the press will do right now.
           child: _PillButton(
             label: 'CUE',
@@ -454,9 +455,9 @@ class _TransportButtons extends StatelessWidget {
             onPressEnd: deck.cueUp,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         Expanded(
-          flex: 2,
+          flex: 4,
           child: _PillButton(
             icon: deck.playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
             color: deck.color,
@@ -464,8 +465,9 @@ class _TransportButtons extends StatelessWidget {
             onTap: deck.togglePlay,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         Expanded(
+          flex: 3,
           child: _PillButton(
             label:
                 deck.loopActive
@@ -476,8 +478,9 @@ class _TransportButtons extends StatelessWidget {
             onTap: deck.loopPress,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         Expanded(
+          flex: 3,
           child: _PillButton(
             label: 'SYNC',
             color: deck.color,
