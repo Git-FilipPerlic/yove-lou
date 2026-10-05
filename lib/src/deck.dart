@@ -117,7 +117,7 @@ class Deck extends ChangeNotifier {
       for (var i = 0; i < hotCueCount; i++) {
         hotCues[i] = null;
       }
-      await setTempo(0);
+      await setTempo(0, manual: false);
       _applyVolume();
       position.value = Duration.zero;
       notifyListeners();
@@ -132,6 +132,7 @@ class Deck extends ChangeNotifier {
     _previewTimer?.cancel();
     _previewing = false;
     _clearAnalysis();
+    syncOn = false;
     await _player.stop();
     path = null;
     title = '';
@@ -169,6 +170,7 @@ class Deck extends ChangeNotifier {
       envRate = found.envRate;
       wave = _waveFromEnv();
     }
+    if (syncOn) _applySync();
     notifyListeners();
   }
 
@@ -243,8 +245,8 @@ class Deck extends ChangeNotifier {
     _playlistChanged();
   }
 
+  /// [newIndex] is the final position (what ReorderableListView.onReorderItem gives).
   void reorderPlaylist(int oldIndex, int newIndex) {
-    if (newIndex > oldIndex) newIndex -= 1;
     final current = currentIndex == null ? null : playlist[currentIndex!];
     playlist.insert(newIndex, playlist.removeAt(oldIndex));
     if (current != null) currentIndex = playlist.indexOf(current);
@@ -387,9 +389,89 @@ class Deck extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ------------------------------------------------------------------ sync
+
+  /// The other deck; set by [Mixer].
+  Deck? partner;
+
+  /// SYNC is on: this deck follows the other deck's tempo.
+  bool syncOn = false;
+  double _syncRatio = 1; // 1 = same tempo, 2 = double time, 0.5 = half time
+
+  /// Press SYNC. Sync stays on (and keeps following the other deck) until you
+  /// press it again or move this deck's tempo fader. When both decks are
+  /// playing the beats are also lined up once. Returns a message when it
+  /// could not do the job fully.
+  String? toggleSync() {
+    if (syncOn) {
+      syncOn = false;
+      notifyListeners();
+      return null;
+    }
+    final p = partner;
+    if (bpm == null) return 'Deck $name has no BPM yet';
+    if (p == null || p.liveBpm == null) return 'Deck ${p?.name} has no BPM yet';
+    syncOn = true;
+    p.syncOn = false; // two decks cannot follow each other
+    p.notifyListeners();
+    final msg = _applySync();
+    if (playing && p.playing) _alignBeats();
+    notifyListeners();
+    return msg;
+  }
+
+  /// Sets the tempo fader so this deck's BPM matches the other deck's.
+  /// A 64 BPM song follows a 128 BPM one at half time instead of being
+  /// stretched 100 %.
+  String? _applySync() {
+    final target = partner?.liveBpm;
+    final mine = bpm;
+    if (target == null || mine == null) return null;
+    var best = double.infinity;
+    var wanted = 0.0;
+    for (final m in const [1.0, 2.0, 0.5]) {
+      final t = target * m / mine - 1;
+      if (t.abs() < best) {
+        best = t.abs();
+        wanted = t;
+        _syncRatio = m;
+      }
+    }
+    final clamped = wanted.clamp(-tempoRange, tempoRange);
+    if ((clamped - tempo).abs() > 1e-4) setTempo(clamped, manual: false);
+    return wanted.abs() > tempoRange + 1e-9
+        ? 'Out of range: needs ${(wanted * 100).toStringAsFixed(1)} % (max 8 %)'
+        : null;
+  }
+
+  /// Called when the other deck changes (its tempo fader, a new song, ...).
+  void _partnerChanged() {
+    if (syncOn) _applySync();
+  }
+
+  /// Slide this deck so its beats land on the other deck's beats.
+  void _alignBeats() {
+    final p = partner;
+    if (p == null || !hasGrid || !p.hasGrid || _syncRatio != 1) return;
+    double phase(Deck d) {
+      final secs = d._player.position.inMicroseconds / 1e6;
+      final x = (secs - d.firstBeat!) / (60 / d.bpm!);
+      return x - x.floorToDouble();
+    }
+
+    var diff = phase(p) - phase(this);
+    if (diff > 0.5) diff -= 1;
+    if (diff < -0.5) diff += 1;
+    final now = _player.position.inMicroseconds;
+    seekTo(Duration(microseconds: (now + diff * 60 / bpm! * 1e6).round()));
+  }
+
   // ------------------------------------------------------------ tempo/mixer
 
-  Future<void> setTempo(double v) async {
+  /// [manual] = you moved the fader (or reset it), which ends SYNC. Sync and
+  /// song loading pass false.
+  Future<void> setTempo(double v, {bool manual = true}) async {
+    if (manual) syncOn = false;
     tempo = v.clamp(-tempoRange, tempoRange);
     notifyListeners();
     try {
@@ -441,6 +523,10 @@ class Deck extends ChangeNotifier {
 /// Two decks + crossfader + master.
 class Mixer extends ChangeNotifier {
   Mixer(this.a, this.b) {
+    a.partner = b;
+    b.partner = a;
+    a.addListener(b._partnerChanged);
+    b.addListener(a._partnerChanged);
     _apply();
   }
 

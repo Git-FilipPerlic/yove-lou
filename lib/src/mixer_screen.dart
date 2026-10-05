@@ -252,6 +252,10 @@ Future<void> showHelp(BuildContext context) {
     ),
     ('PLAY', 'Start or pause the track.'),
     (
+      'SYNC',
+      'Makes this deck follow the tempo of the other deck. If both are playing, the beats are also lined up. Stays on until you press it again or move this tempo fader. A 64 BPM song follows a 128 BPM one at half time.'
+    ),
+    (
       'CUE',
       'When paused: set the cue point here. When playing: jump back to the cue and stop. HOLD it to preview: the song plays from the cue and snaps back when you let go. Press PLAY while holding to keep playing.'
     ),

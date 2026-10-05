@@ -105,8 +105,8 @@ class _DeckList extends StatelessWidget {
                       )
                     : ReorderableListView.builder(
                         itemCount: deck.playlist.length,
-                        onReorder: deck.reorderPlaylist,
-                        proxyDecorator: (child, _, __) => Material(
+                        onReorderItem: deck.reorderPlaylist,
+                        proxyDecorator: (child, _, _) => Material(
                             color: YL.card, elevation: 4, child: child),
                         itemBuilder: (context, i) => _TrackRow(
                           key: ObjectKey(deck.playlist[i]),

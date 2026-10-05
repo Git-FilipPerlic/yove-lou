@@ -32,8 +32,9 @@ class Store {
       try {
         final m = jsonDecode(s) as Map<String, dynamic>;
         final path = m['path'] as String;
-        if (File(path).existsSync())
+        if (File(path).existsSync()) {
           tracks.add(Track(path, m['name'] as String));
+        }
       } catch (_) {
         // skip a corrupt entry
       }

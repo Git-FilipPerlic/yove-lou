@@ -226,6 +226,7 @@ class _Header extends StatelessWidget {
                       ),
                       Text(
                         '  ${tempoPct >= 0 ? '+' : ''}${tempoPct.toStringAsFixed(1)}%'
+                        '${deck.syncOn ? '  SYNC' : ''}'
                         '${deck.loopActive ? '  LOOP' : ''}',
                         style: TextStyle(
                             fontSize: YL.grunge ? 9 : 10,
@@ -319,6 +320,25 @@ class _TransportButtons extends StatelessWidget {
             color: YL.ink,
             filled: deck.loopActive,
             onTap: deck.loopPress,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Expanded(
+          child: _PillButton(
+            label: 'SYNC',
+            color: deck.color,
+            filled: deck.syncOn,
+            onTap: () {
+              final msg = deck.toggleSync();
+              if (msg != null) {
+                ScaffoldMessenger.of(context)
+                  ..hideCurrentSnackBar()
+                  ..showSnackBar(SnackBar(
+                    content: Text(msg),
+                    duration: const Duration(seconds: 2),
+                  ));
+              }
+            },
           ),
         ),
       ],
