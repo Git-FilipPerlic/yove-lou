@@ -3,34 +3,66 @@
 Code name: **yove lou** (all reminders / check-ins use this name).
 Goal: a CDJ-style imitator that plays **two tracks at the same time**, built in Flutter, designed for a phone held **horizontally**.
 
-Design: clean, modern, flat, white-dominant. Soft shadows, round corners, one accent colour per deck (A blue, B coral).
+Design: three themes, switched with the palette button on the mixer.
+- **Grunge** (default): graphite panels, scratch / dust texture, corner screws, amber LCD time, vinyl jog wheel. Signal red (A), electric blue (B), yellow cue.
+- **Classic**: clean, flat, white-dominant. Soft shadows, round corners, blue (A) and coral (B).
+- **Pearl & Peach**: pearl white with glossy peach, lower contrast.
 
-## v0.1 - what is in the code now
-- [x] Two independent decks (A / B), each with its own audio player
-- [x] Load a local audio file per deck (tap the empty header, or hold -> menu -> Load track)
+## v0.2 - what is in the code now
+**Decks (A / B)**
+- [x] Two independent decks, each with its own audio player
 - [x] Play / pause
-- [x] CUE (CDJ behaviour: paused = set cue here, playing = jump back to cue and pause)
+- [x] CUE (CDJ behaviour): paused = set the cue point here ("SET"), playing = jump back to the cue and pause ("BACK")
 - [x] Jog wheel: drag in a circle to scrub; rotates with the song (33 rpm look)
 - [x] Waveform strip with playhead, tap / drag to seek (placeholder wave, not yet real audio data)
 - [x] Elapsed + remaining time
 - [x] 4 hot-cue pads (tap = set / jump, hold = clear)
 - [x] Manual loop: IN -> OUT -> clear
 - [x] Tempo fader +/-8 % (double-tap to reset)
+
+**Mixer**
 - [x] Channel faders A / B, master fader, crossfader (double-tap to centre)
-- [x] **Hold menu** (long-press the jog wheel or deck header): load, set cue, loop, reset tempo, clear hot cues, eject
-- [x] Landscape-only, immersive mode, SafeArea around notch / camera cut-out / gesture bar
+- [x] Theme button (cycles Grunge, Classic, Pearl & Peach)
+- [x] Help button ("?"): short guide to every control
+
+**Loading music**
+- [x] In-app file browser (explorer style, matches the active theme): folders and audio files only, breadcrumb path, back button
+- [x] Multi-select: tap songs to tick them, "Select all" per folder, ticks survive moving between folders
+- [x] ADD TO A / B (queue them) or ADD + LOAD (queue and load the first one)
+- [x] Hold a song = load it on the deck right now
+- [x] Needs "All files access" permission (asked on first use)
+
+**Playlists**
+- [x] Each deck has its own playlist
+- [x] PLAYLISTS button on the mixer: **hold** to open both playlists side by side (a plain tap only shows a hint)
+- [x] Tap a song = load it, hold + drag = reorder, X = remove, bin = clear, + = add more songs
+- [x] Current song is highlighted
+- [x] When a song ends, the next one in the playlist is loaded and cued (does not autoplay)
+
+**Saved on the device**
+- [x] Playlists (songs whose file was deleted are skipped)
+- [x] Theme choice
+
+**Hold menu** (long-press the jog wheel or deck header): add songs, set cue, loop, reset tempo, clear hot cues, eject.
+
+**Phone layout:** landscape-only, immersive mode, SafeArea around notch / camera cut-out / gesture bar.
+
+## Not saved yet
+Loaded song, cue point, hot cues, loops, fader positions. All reset when the app closes.
 
 ## Next (suggested order)
-1. Real waveform from the audio file (decode peaks in an isolate) + zoomed scrolling waveform
-2. BPM detection + beat grid, show BPM per deck
-3. SYNC (match tempo to the other deck) and master-tempo / key lock
-4. Beat loops (1/2/4/8/16 beats) and loop roll
-5. Track library screen (folders, search, sort by BPM / key / title) - like the browser list in VirtualDJ
-6. Save cues / hot cues / loops per track (local DB)
-7. 3-band EQ (hi / mid / low) + kill switches per channel (Android equalizer or custom DSP)
-8. Filter knob (HPF / LPF sweep) per channel
-9. Level meters per channel and master
-10. Cue-to-headphones (needs split output: phone speaker/BT = master, wired headphones = cue)
+1. Hold CUE to preview (CDJ trick: hold = play from cue, release = jump back)
+2. Real waveform from the audio file (decode peaks in an isolate) + zoomed scrolling waveform
+3. BPM detection + beat grid, show BPM per deck
+4. SYNC (match tempo to the other deck) and master-tempo / key lock
+5. Beat loops (1/2/4/8/16 beats) and loop roll
+6. Library extras: search, sort by BPM / key / title, song length in the list, deck menu shortcut to the playlists
+7. Save loaded song, cues / hot cues / loops per track (local DB)
+8. 3-band EQ (hi / mid / low) + kill switches per channel (Android equalizer or custom DSP)
+9. Filter knob (HPF / LPF sweep) per channel
+10. Level meters per channel and master
+11. Cue-to-headphones (needs split output: phone speaker/BT = master, wired headphones = cue)
+12. Option to autoplay the next playlist song
 
 ## Researched pro-player features (backlog)
 **Transport:** play/pause, CUE, cue-preview (hold CUE), previous/next track, search (fast scan), jog modes (vinyl / CDJ), slip mode, reverse, brake/start effect on stop/play.
@@ -41,11 +73,12 @@ Design: clean, modern, flat, white-dominant. Soft shadows, round corners, one ac
 **Pads / sampler:** hot cue, roll, slicer, sampler slots, scratch pad.
 **Library:** folders, playlists, history, key (Camelot) + BPM display, compatible-song suggestions, search, ratings, colour tags.
 **Display:** zoomed + overview waveform, colour-coded frequency waveform, beat grid, key display, remaining/elapsed toggle, album art on the jog.
-**Extras:** record the mix to a file, MIDI / USB controller input, video decks (VirtualDJ-style), Ableton Link-style sync, cloud/streaming sources, themes (white default, dark later).
+**Extras:** record the mix to a file, MIDI / USB controller input, video decks (VirtualDJ-style), Ableton Link-style sync, cloud/streaming sources, more themes.
 
 ## UX notes (landscape phone)
 - Keep all controls inside SafeArea: the notch / punch-hole, rounded corners and the bottom gesture bar are danger zones.
 - Immersive mode hides status + nav bar; swipe from the edge to peek them.
-- Prefer **hold -> menu** over swipe gestures (decision from the owner). Swipes only where it is natural: jog drag, faders, waveform scrub.
+- Prefer **hold -> menu** over swipe gestures (decision from the owner). Swipes only where it is natural: jog drag, faders, waveform scrub. Risky screens (playlists) open with a hold so they can't be hit by accident mid-mix.
 - Minimum touch target about 44 dp for anything used while performing.
+- Dislikes green and brown (owner): keep them out of the default theme.
 - Android only has one audio output route by default, so true headphone cueing is a stretch goal.
