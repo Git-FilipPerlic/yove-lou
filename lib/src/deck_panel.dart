@@ -6,6 +6,7 @@ import 'deck.dart';
 import 'file_browser.dart';
 import 'grunge.dart';
 import 'theme.dart';
+import 'zoom_wave.dart';
 
 /// Opens the in-app file browser; picking a song loads it into [deck].
 Future<void> pickTrack(BuildContext context, Deck deck) {
@@ -141,7 +142,9 @@ class DeckPanel extends StatelessWidget {
             children: [
               _Header(deck: deck),
               const SizedBox(height: 6),
-              SizedBox(height: 38, child: WaveStrip(deck: deck)),
+              SizedBox(height: 40, child: ZoomWave(deck: deck)),
+              const SizedBox(height: 3),
+              SizedBox(height: 14, child: WaveStrip(deck: deck)),
               const SizedBox(height: 6),
               Expanded(
                 child: Row(
@@ -647,7 +650,7 @@ class _WavePainter extends CustomPainter {
     final played = Paint()..color = deck.color;
     final rest = Paint()..color = YL.waveRest;
     for (var i = 0; i < n; i++) {
-      final h = deck.wave[i] * (size.height - 8);
+      final h = deck.wave[i] * (size.height - (size.height < 20 ? 2 : 8));
       final left = i * bw;
       final rect = RRect.fromRectAndRadius(
         Rect.fromCenter(

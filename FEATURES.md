@@ -15,12 +15,13 @@ Design: three themes, switched with the palette button on the mixer.
 - [x] CUE (CDJ behaviour): paused = set the cue point here ("SET"), playing = jump back to the cue and pause ("BACK")
 - [x] Hold CUE to preview: plays from the cue while held, snaps back on release; press PLAY while holding to keep playing
 - [x] Jog wheel: drag in a circle to scrub; rotates with the song (33 rpm look)
-- [x] Waveform strip with playhead, tap / drag to seek (placeholder wave, not yet real audio data)
+- [x] Real waveform from the audio (loudness of the first 12 min), in two parts: a zoomed strip that scrolls around the playhead (8 s window, drag sideways to scrub) and a thin overview bar of the whole song (tap / drag to seek)
+- [x] Beat grid on the zoomed strip: a line on every beat, a thick line on every 4th; follows BPM x2 / /2 fixes
 - [x] Elapsed + remaining time
 - [x] 4 hot-cue pads (tap = set / jump, hold = clear)
 - [x] Manual loop: IN -> OUT -> clear
 - [x] Tempo fader +/-8 % (double-tap to reset)
-- [x] BPM detection (native Android decoder, ~45 s analysed in under a second), shown on each deck and following the tempo fader; BPM x2 / /2 in the hold menu to fix half- or double-time readings; results cached per song
+- [x] BPM + first-beat detection (native Android decoder, fitted over up to 4 min, exact on test tracks), shown on each deck and following the tempo fader; BPM x2 / /2 in the hold menu to fix half- or double-time readings (your fix is remembered per song; the analysis itself re-runs on each load, about 1-3 s)
 
 **Mixer**
 - [x] Channel faders A / B, master fader, crossfader (double-tap to centre)
@@ -53,8 +54,8 @@ Design: three themes, switched with the palette button on the mixer.
 Loaded song, cue point, hot cues, loops, fader positions. All reset when the app closes.
 
 ## Next (suggested order)
-1. Real waveform from the audio file (decode peaks in an isolate) + zoomed scrolling waveform
-2. Beat grid from the detected BPM (first-beat marker, grid lines on the waveform); better BPM accuracy on live-played music
+1. Beat grid tools: shift the grid, mark which beat is beat 1 (bar start), re-detect, tempo changes within a song
+2. Colour-coded frequency waveform and waveform for songs longer than 12 min
 3. SYNC (match tempo to the other deck) and master-tempo / key lock
 4. Beat loops (1/2/4/8/16 beats) and loop roll
 5. Library extras: search, sort by BPM / key / title, song length in the list, deck menu shortcut to the playlists

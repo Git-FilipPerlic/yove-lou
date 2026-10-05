@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -61,12 +62,28 @@ class Deck extends ChangeNotifier {
   Duration duration = Duration.zero;
   List<double> wave = const [];
 
-  /// Tempo of the loaded song at normal speed; null until worked out.
-  double? bpm;
+  /// What the analyzer found (null until done, or if it could not tell).
+  double? detectedBpm;
+
+  /// Your BPM fix for this song: 1 = as detected, 2 = double, 0.5 = half.
+  double bpmScale = 1;
+
+  /// Seconds from the start of the song to the first beat.
+  double? firstBeat;
   bool bpmBusy = false;
+
+  /// Loudness curve of the song (0..1), [envRate] values per second.
+  Float32List env = Float32List(0);
+  int envRate = 200;
+
+  /// Tempo of the song at normal speed, after your x2 / /2 fix.
+  double? get bpm => detectedBpm == null ? null : detectedBpm! * bpmScale;
 
   /// BPM you hear now, with the tempo fader applied.
   double? get liveBpm => bpm == null ? null : bpm! * (1 + tempo);
+
+  /// Beat grid is available once tempo and first beat are known.
+  bool get hasGrid => bpm != null && firstBeat != null;
 
   Duration? cue;
   final List<Duration?> hotCues = List.filled(hotCueCount, null);
@@ -114,8 +131,7 @@ class Deck extends ChangeNotifier {
   Future<void> eject() async {
     _previewTimer?.cancel();
     _previewing = false;
-    bpm = null;
-    bpmBusy = false;
+    _clearAnalysis();
     await _player.stop();
     path = null;
     title = '';
@@ -130,31 +146,55 @@ class Deck extends ChangeNotifier {
 
   // ---------------------------------------------------------------- bpm
 
-  Future<void> _findBpm(String filePath) async {
-    final cached = Store.cachedBpm(filePath);
-    if (cached != null) {
-      bpm = cached;
-      bpmBusy = false;
-      notifyListeners();
-      return;
-    }
-    bpm = null;
-    bpmBusy = true;
-    notifyListeners();
-    final found = await Bpm.detect(filePath);
-    if (path != filePath) return; // another song was loaded meanwhile
-    bpm = found;
+  void _clearAnalysis() {
+    detectedBpm = null;
+    firstBeat = null;
+    bpmScale = 1;
     bpmBusy = false;
-    if (found != null) Store.saveBpm(filePath, found);
+    env = Float32List(0);
+  }
+
+  Future<void> _findBpm(String filePath) async {
+    _clearAnalysis();
+    bpmBusy = true;
+    bpmScale = Store.bpmScale(filePath);
+    notifyListeners();
+    final found = await Bpm.analyze(filePath);
+    if (path != filePath) return; // another song was loaded meanwhile
+    bpmBusy = false;
+    if (found != null) {
+      detectedBpm = found.bpm;
+      firstBeat = found.firstBeat;
+      env = found.env;
+      envRate = found.envRate;
+      wave = _waveFromEnv();
+    }
     notifyListeners();
   }
 
-  /// Fix a wrong half-time or double-time reading.
+  /// Overview waveform: the loudest point in each slice of the song.
+  List<double> _waveFromEnv() {
+    const bars = 160;
+    final seconds = duration.inMilliseconds > 0
+        ? duration.inMilliseconds / 1000
+        : env.length / envRate;
+    return List.generate(bars, (b) {
+      final from = (b / bars * seconds * envRate).floor();
+      final to = ((b + 1) / bars * seconds * envRate).ceil();
+      if (from >= env.length) return 0.08; // past the analysed part
+      var peak = 0.0;
+      for (var i = from; i < to && i < env.length; i++) {
+        if (env[i] > peak) peak = env[i];
+      }
+      return peak.clamp(0.08, 1.0);
+    });
+  }
+
+  /// Fix a wrong half-time or double-time reading (the beat grid follows).
   void scaleBpm(double factor) {
-    final b = bpm;
-    if (b == null || path == null) return;
-    bpm = (b * factor * 10).round() / 10;
-    Store.saveBpm(path!, bpm!);
+    if (detectedBpm == null || path == null) return;
+    bpmScale = (bpmScale * factor).clamp(0.25, 4.0);
+    Store.saveBpmScale(path!, bpmScale);
     notifyListeners();
   }
 

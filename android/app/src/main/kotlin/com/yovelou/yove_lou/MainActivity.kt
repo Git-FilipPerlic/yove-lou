@@ -3,6 +3,8 @@ package com.yovelou.yove_lou
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.util.concurrent.Executors
 
 class MainActivity : FlutterActivity() {
@@ -13,7 +15,7 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "yove_lou/bpm")
             .setMethodCallHandler { call, result ->
-                if (call.method != "detect") {
+                if (call.method != "analyze") {
                     result.notImplemented()
                     return@setMethodCallHandler
                 }
@@ -23,12 +25,22 @@ class MainActivity : FlutterActivity() {
                     return@setMethodCallHandler
                 }
                 worker.execute {
-                    val bpm = try {
-                        BpmDetector.detect(path)
+                    val analysis = try {
+                        BpmDetector.analyze(path)
                     } catch (e: Exception) {
                         null
                     }
-                    runOnUiThread { result.success(bpm) }
+                    val reply: Map<String, Any?>? = analysis?.let {
+                        val bytes = ByteBuffer.allocate(it.env.size * 4).order(ByteOrder.LITTLE_ENDIAN)
+                        bytes.asFloatBuffer().put(it.env)
+                        mapOf(
+                            "bpm" to it.bpm,
+                            "firstBeat" to it.firstBeat,
+                            "envRate" to BpmDetector.ENV_RATE,
+                            "env" to bytes.array(),
+                        )
+                    }
+                    runOnUiThread { result.success(reply) }
                 }
             }
     }

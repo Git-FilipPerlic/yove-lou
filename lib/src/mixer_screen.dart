@@ -246,6 +246,10 @@ Future<void> showHelp(BuildContext context) {
       'Hold the button on the mixer to see the playlists of both decks. Tap a song to load it, drag to reorder, X to remove. When a song ends, the next one is loaded and ready.'
     ),
     ('Hold deck / jog', 'Menu: loop, set cue, reset tempo, clear pads, eject.'),
+    (
+      'Waveform',
+      'Top strip: close-up around the playhead with the beat grid (thick line = every 4th beat). Drag it sideways to scrub. Bar below: the whole song, tap or drag to jump.'
+    ),
     ('PLAY', 'Start or pause the track.'),
     (
       'CUE',

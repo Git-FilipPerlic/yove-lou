@@ -16,11 +16,11 @@ class Store {
 
   static String? get themeName => _p?.getString('theme');
 
-  /// BPM already worked out for a song (so it is only analysed once).
-  static double? cachedBpm(String path) => _p?.getDouble('bpm_$path');
+  /// Your x2 / /2 fix for a song's BPM (1 = as detected).
+  static double bpmScale(String path) => _p?.getDouble('bpmscale_$path') ?? 1;
 
-  static void saveBpm(String path, double bpm) =>
-      _p?.setDouble('bpm_$path', bpm);
+  static void saveBpmScale(String path, double scale) =>
+      _p?.setDouble('bpmscale_$path', scale);
 
   static void saveTheme(String name) => _p?.setString('theme', name);
 
