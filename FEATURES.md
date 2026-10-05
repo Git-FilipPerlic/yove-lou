@@ -8,7 +8,7 @@ Design: three themes, switched with the palette button on the mixer.
 - **Classic**: clean, flat, white-dominant. Soft shadows, round corners, blue (A) and coral (B).
 - **Pearl & Peach**: pearl white with glossy peach, lower contrast.
 
-## v0.2 - what is in the code now
+## v0.3 - what is in the code now
 **Decks (A / B)**
 - [x] Two independent decks, each with its own audio player
 - [x] Play / pause
@@ -18,19 +18,27 @@ Design: three themes, switched with the palette button on the mixer.
 - [x] Real waveform from the audio (loudness of the first 12 min), in two parts: a zoomed strip that scrolls around the playhead (8 s window, drag sideways to scrub) and a thin overview bar of the whole song (tap / drag to seek)
 - [x] Beat grid on the zoomed strip: a line on every beat, a thick line on every 4th; follows BPM x2 / /2 fixes
 - [x] Elapsed + remaining time
+- [x] Long song titles scroll to and fro (marquee) instead of being cut with "..."
 - [x] 4 hot-cue pads (tap = set / jump, hold = clear)
 - [x] Manual loop: IN -> OUT -> clear
 - [x] Tempo fader +/-8 % (double-tap to reset)
-- [x] BPM + first-beat detection (native Android decoder, fitted over up to 4 min, exact on test tracks), shown on each deck and following the tempo fader; BPM x2 / /2 in the hold menu to fix half- or double-time readings (your fix is remembered per song; the analysis itself re-runs on each load, about 1-3 s)
+- [x] BPM + first-beat detection (native Android decoder, fitted over up to 4 min, exact on test tracks), shown on each deck and following the tempo fader; BPM x2 / /2 in the hold menu to fix half- or double-time readings (your fix is remembered per song)
+- [x] Analysis results (BPM, beat grid, waveform) are cached on the device, so a song is analysed only once; later loads are instant
+- [x] SYNC: the deck follows the other deck's tempo (also at half / double time) and lines the beats up once when both are playing; stays on until pressed again or the tempo fader is moved
+- [x] Taller CUE / IN / SYNC buttons (easier to hit mid-mix)
 
 **Mixer**
 - [x] Channel faders A / B, master fader, crossfader (double-tap to centre)
 - [x] Theme button (cycles Grunge, Classic, Pearl & Peach)
-- [x] Help button ("?"): short guide to every control
+- [x] Help button ("?"): short guide as small cards in two columns
+- [x] Crossfader and master volume are remembered
 
 **Loading music**
-- [x] In-app file browser (explorer style, matches the active theme): folders and audio files only, breadcrumb path, back button
-- [x] Multi-select: tap songs to tick them, "Select all" per folder, ticks survive moving between folders
+- [x] In-app file browser (explorer style, matches the active theme): folders and audio files only, back button, compact rows (about 5 visible in landscape)
+- [x] One top row: back, deck chip, breadcrumb path (stays on the current folder), sort button (name / newest first), search (filters the current folder as you type)
+- [x] Opens in the folder you were in last time
+- [x] Multi-select: tap songs to tick them, "All / None" per folder, ticks survive moving between folders
+- [x] Adding songs that are already in the playlist says how many were skipped
 - [x] ADD TO A / B (queue them) or ADD + LOAD (queue and load the first one)
 - [x] Hold a song = load it on the deck right now
 - [x] Needs "All files access" permission (asked on first use)
@@ -41,25 +49,38 @@ Design: three themes, switched with the palette button on the mixer.
 - [x] Tap a song = load it, hold + drag = reorder, X = remove, bin = clear, + = add more songs
 - [x] Current song is highlighted
 - [x] When a song ends, the next one in the playlist is loaded and cued (does not autoplay)
+- [x] Play next: skip icon on every song moves it right after the song on the deck
+- [x] **Sets**: SAVE SET names the current pair of playlists (A + B); SETS lists them with song counts, tap to load onto both decks, bin to delete (deleted files are skipped when loading)
 
 **Saved on the device**
-- [x] Playlists (songs whose file was deleted are skipped)
+- [x] Playlists (songs whose file was deleted are skipped) and named sets
 - [x] Theme choice
+- [x] What is on each deck: loaded song, position, cue, hot cues, loop, tempo and channel volume (loaded but not playing after a restart)
+- [x] Crossfader / master volume, last browser folder, per-song BPM x2 / /2 fix
+- [x] Analysis cache (in the app cache folder; Android may clear it, then songs are analysed again)
 
-**Hold menu** (long-press the jog wheel or deck header): add songs, set cue, loop, reset tempo, clear hot cues, eject.
+**Hold menu** (long-press the jog wheel or deck header): add songs, set cue, loop in/out, reset tempo, clear cues, BPM x2, BPM /2, eject. Labels stay on one line.
 
 **Phone layout:** landscape-only, immersive mode, SafeArea around notch / camera cut-out / gesture bar.
 
 ## Not saved yet
-Loaded song, cue point, hot cues, loops, fader positions. All reset when the app closes.
+SYNC state, a song that was playing (it comes back paused), per-song cues / loops for songs that are not on a deck.
+
+## Known limits
+- Very long files (for example a 2 h mix) take over a minute to analyse, and analysis runs one song at a time; the overview waveform covers only the first 12 min.
+- Beat 1 (bar start) is not detected, the grid cannot be shifted yet.
+- UI is English only. "All files access" is restricted on Google Play (fine for sideloading).
+
+## Part of perfundo
+The decks also live inside the **perfundo** app (a copy of the event app): a DJ switch at the top right of the large-play-button screen opens them. perfundo keeps its own copy of the code in `lib/yove/` and its own saved data (keys start with `yove_`).
 
 ## Next (suggested order)
 1. Beat grid tools: shift the grid, mark which beat is beat 1 (bar start), re-detect, tempo changes within a song
 2. Colour-coded frequency waveform and waveform for songs longer than 12 min
-3. SYNC (match tempo to the other deck) and master-tempo / key lock
+3. Master-tempo / key lock
 4. Beat loops (1/2/4/8/16 beats) and loop roll
-5. Library extras: search, sort by BPM / key / title, song length in the list, deck menu shortcut to the playlists
-6. Save loaded song, cues / hot cues / loops per track (local DB)
+5. Library extras: sort by BPM / key, BPM and song length in the lists, deck menu shortcut to the playlists, per-deck playlist saves
+6. Per-track cues / hot cues / loops (local DB)
 7. 3-band EQ (hi / mid / low) + kill switches per channel (Android equalizer or custom DSP)
 8. Filter knob (HPF / LPF sweep) per channel
 9. Level meters per channel and master
