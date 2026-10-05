@@ -37,6 +37,12 @@ Future<void> showDeckMenu(BuildContext context, Deck deck) {
             () => run(() => deck.setTempo(0))),
         _MenuItem(Icons.grid_view_rounded, 'Clear hot cues',
             () => run(deck.clearAllHotCues)),
+        if (deck.bpm != null) ...[
+          _MenuItem(Icons.looks_two_outlined, 'BPM x2',
+              () => run(() => deck.scaleBpm(2))),
+          _MenuItem(Icons.exposure_neg_1_rounded, 'BPM /2',
+              () => run(() => deck.scaleBpm(0.5))),
+        ],
         _MenuItem(Icons.eject_rounded, 'Eject', () => run(deck.eject)),
       ];
 
@@ -197,13 +203,34 @@ class _Header extends StatelessWidget {
                     color: deck.isLoaded ? YL.ink : YL.inkSoft,
                   ),
                 ),
-                Text(
-                  '${YL.grunge ? '' : 'tempo '}${tempoPct >= 0 ? '+' : ''}${tempoPct.toStringAsFixed(1)}%'
-                  '${deck.loopActive ? '   LOOP' : ''}',
-                  style: TextStyle(
-                      fontSize: YL.grunge ? 9 : 10,
-                      color: YL.inkSoft,
-                      fontWeight: FontWeight.w600),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        deck.bpmBusy
+                            ? 'BPM ...'
+                            : (deck.liveBpm == null
+                                ? 'BPM --'
+                                : '${deck.liveBpm!.toStringAsFixed(1)} BPM'),
+                        style: TextStyle(
+                            fontSize: YL.grunge ? 10 : 11,
+                            color:
+                                deck.liveBpm == null ? YL.inkSoft : deck.color,
+                            fontWeight: FontWeight.w800),
+                      ),
+                      Text(
+                        '  ${tempoPct >= 0 ? '+' : ''}${tempoPct.toStringAsFixed(1)}%'
+                        '${deck.loopActive ? '  LOOP' : ''}',
+                        style: TextStyle(
+                            fontSize: YL.grunge ? 9 : 10,
+                            color: YL.inkSoft,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

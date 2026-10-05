@@ -20,6 +20,7 @@ Design: three themes, switched with the palette button on the mixer.
 - [x] 4 hot-cue pads (tap = set / jump, hold = clear)
 - [x] Manual loop: IN -> OUT -> clear
 - [x] Tempo fader +/-8 % (double-tap to reset)
+- [x] BPM detection (native Android decoder, ~45 s analysed in under a second), shown on each deck and following the tempo fader; BPM x2 / /2 in the hold menu to fix half- or double-time readings; results cached per song
 
 **Mixer**
 - [x] Channel faders A / B, master fader, crossfader (double-tap to centre)
@@ -53,7 +54,7 @@ Loaded song, cue point, hot cues, loops, fader positions. All reset when the app
 
 ## Next (suggested order)
 1. Real waveform from the audio file (decode peaks in an isolate) + zoomed scrolling waveform
-2. BPM detection + beat grid, show BPM per deck
+2. Beat grid from the detected BPM (first-beat marker, grid lines on the waveform); better BPM accuracy on live-played music
 3. SYNC (match tempo to the other deck) and master-tempo / key lock
 4. Beat loops (1/2/4/8/16 beats) and loop roll
 5. Library extras: search, sort by BPM / key / title, song length in the list, deck menu shortcut to the playlists

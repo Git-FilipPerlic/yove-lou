@@ -181,29 +181,32 @@ class _PlaylistsButton extends StatelessWidget {
           onLongPress: () => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => PlaylistsScreen(a: a, b: b)),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.queue_music_rounded, size: 18, color: YL.ink),
-              const SizedBox(width: 6),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('PLAYLISTS',
-                      style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.4,
-                          color: YL.ink)),
-                  Text('hold  A${a.playlist.length} B${b.playlist.length}',
-                      style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w600,
-                          color: YL.inkSoft)),
-                ],
-              ),
-            ],
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.queue_music_rounded, size: 18, color: YL.ink),
+                const SizedBox(width: 6),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('PLAYLISTS',
+                        style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.4,
+                            color: YL.ink)),
+                    Text('hold  A${a.playlist.length} B${b.playlist.length}',
+                        style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                            color: YL.inkSoft)),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 
+import 'bpm.dart';
 import 'store.dart';
 import 'theme.dart';
 
@@ -60,6 +61,13 @@ class Deck extends ChangeNotifier {
   Duration duration = Duration.zero;
   List<double> wave = const [];
 
+  /// Tempo of the loaded song at normal speed; null until worked out.
+  double? bpm;
+  bool bpmBusy = false;
+
+  /// BPM you hear now, with the tempo fader applied.
+  double? get liveBpm => bpm == null ? null : bpm! * (1 + tempo);
+
   Duration? cue;
   final List<Duration?> hotCues = List.filled(hotCueCount, null);
 
@@ -96,6 +104,7 @@ class Deck extends ChangeNotifier {
       _applyVolume();
       position.value = Duration.zero;
       notifyListeners();
+      _findBpm(filePath);
       return null;
     } catch (e) {
       return 'Cannot open this file: $e';
@@ -105,6 +114,8 @@ class Deck extends ChangeNotifier {
   Future<void> eject() async {
     _previewTimer?.cancel();
     _previewing = false;
+    bpm = null;
+    bpmBusy = false;
     await _player.stop();
     path = null;
     title = '';
@@ -114,6 +125,36 @@ class Deck extends ChangeNotifier {
     loopIn = loopOut = null;
     loopActive = false;
     position.value = Duration.zero;
+    notifyListeners();
+  }
+
+  // ---------------------------------------------------------------- bpm
+
+  Future<void> _findBpm(String filePath) async {
+    final cached = Store.cachedBpm(filePath);
+    if (cached != null) {
+      bpm = cached;
+      bpmBusy = false;
+      notifyListeners();
+      return;
+    }
+    bpm = null;
+    bpmBusy = true;
+    notifyListeners();
+    final found = await Bpm.detect(filePath);
+    if (path != filePath) return; // another song was loaded meanwhile
+    bpm = found;
+    bpmBusy = false;
+    if (found != null) Store.saveBpm(filePath, found);
+    notifyListeners();
+  }
+
+  /// Fix a wrong half-time or double-time reading.
+  void scaleBpm(double factor) {
+    final b = bpm;
+    if (b == null || path == null) return;
+    bpm = (b * factor * 10).round() / 10;
+    Store.saveBpm(path!, bpm!);
     notifyListeners();
   }
 
