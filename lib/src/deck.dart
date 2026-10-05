@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 import 'dart:math' as math;
 
@@ -15,29 +16,35 @@ import 'theme.dart';
 /// widgets that care about it rebuild; everything else uses [notifyListeners].
 class Deck extends ChangeNotifier {
   Deck({required this.name}) {
-    _subs.add(_player.playerStateStream.listen((s) {
-      if (s.processingState == ProcessingState.completed) {
-        _player.pause();
-        final next = (currentIndex ?? -1) + 1;
-        if (currentIndex != null && next < playlist.length) {
-          // Queue advances: next song is loaded and cued, ready to play.
-          loadPath(playlist[next].path, playlist[next].name);
-        } else {
-          _player.seek(Duration.zero);
+    _subs.add(
+      _player.playerStateStream.listen((s) {
+        if (s.processingState == ProcessingState.completed) {
+          _player.pause();
+          final next = (currentIndex ?? -1) + 1;
+          if (currentIndex != null && next < playlist.length) {
+            // Queue advances: next song is loaded and cued, ready to play.
+            loadPath(playlist[next].path, playlist[next].name);
+          } else {
+            _player.seek(Duration.zero);
+          }
         }
-      }
-      notifyListeners();
-    }));
-    _subs.add(_player.durationStream.listen((d) {
-      duration = d ?? Duration.zero;
-      notifyListeners();
-    }));
-    _subs.add(_player
-        .createPositionStream(
-          minPeriod: const Duration(milliseconds: 30),
-          maxPeriod: const Duration(milliseconds: 60),
-        )
-        .listen(_onPosition));
+        notifyListeners();
+      }),
+    );
+    _subs.add(
+      _player.durationStream.listen((d) {
+        duration = d ?? Duration.zero;
+        notifyListeners();
+      }),
+    );
+    _subs.add(
+      _player
+          .createPositionStream(
+            minPeriod: const Duration(milliseconds: 30),
+            maxPeriod: const Duration(milliseconds: 60),
+          )
+          .listen(_onPosition),
+    );
   }
 
   static const int hotCueCount = 4;
@@ -99,6 +106,80 @@ class Deck extends ChangeNotifier {
   bool get isLoaded => path != null;
   bool get playing => _player.playing;
   bool get hasLoopPoints => loopIn != null && loopOut != null;
+
+  // ---------------------------------------------------------------- session
+  // The loaded song, position, cues, loop, tempo and volume survive closing
+  // the app. Saved a moment after any change, and every 5 s while playing.
+
+  bool _sessionReady = false;
+  Timer? _saveTimer;
+  Timer? _autosave;
+
+  @override
+  void notifyListeners() {
+    super.notifyListeners();
+    if (_sessionReady) {
+      _saveTimer?.cancel();
+      _saveTimer = Timer(const Duration(milliseconds: 800), _saveSession);
+    }
+  }
+
+  void _saveSession() {
+    final p = path;
+    if (p == null) {
+      Store.saveSession(name, null);
+      return;
+    }
+    int? ms(Duration? d) => d?.inMilliseconds;
+    Store.saveSession(name, {
+      'path': p,
+      'pos': position.value.inMilliseconds,
+      'cue': ms(cue),
+      'hot': [for (final h in hotCues) ms(h)],
+      'loopIn': ms(loopIn),
+      'loopOut': ms(loopOut),
+      'loopActive': loopActive,
+      'tempo': tempo,
+      'volume': channelVolume,
+    });
+  }
+
+  /// Puts back what this deck had when the app was closed. Call once at
+  /// start, after [restorePlaylist]. The song is loaded but not played.
+  Future<void> restoreSession() async {
+    final s = Store.loadSession(name);
+    final p = s?['path'] as String?;
+    if (s != null && p != null && File(p).existsSync()) {
+      final err = await loadPath(p, p.split('/').last);
+      if (err == null) {
+        Duration? dur(Object? v) =>
+            v is num ? Duration(milliseconds: v.toInt()) : null;
+        cue = dur(s['cue']);
+        final hot = s['hot'];
+        if (hot is List) {
+          for (var i = 0; i < hotCueCount && i < hot.length; i++) {
+            hotCues[i] = dur(hot[i]);
+          }
+        }
+        loopIn = dur(s['loopIn']);
+        loopOut = dur(s['loopOut']);
+        loopActive = s['loopActive'] == true && hasLoopPoints;
+        channelVolume = (s['volume'] as num?)?.toDouble() ?? channelVolume;
+        _applyVolume();
+        await setTempo((s['tempo'] as num?)?.toDouble() ?? 0, manual: false);
+        final pos = dur(s['pos']);
+        if (pos != null) {
+          await _player.seek(pos);
+          position.value = pos;
+        }
+      }
+    }
+    _sessionReady = true;
+    _autosave = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (playing) _saveSession();
+    });
+    notifyListeners();
+  }
 
   // ---------------------------------------------------------------- loading
 
@@ -177,9 +258,10 @@ class Deck extends ChangeNotifier {
   /// Overview waveform: the loudest point in each slice of the song.
   List<double> _waveFromEnv() {
     const bars = 160;
-    final seconds = duration.inMilliseconds > 0
-        ? duration.inMilliseconds / 1000
-        : env.length / envRate;
+    final seconds =
+        duration.inMilliseconds > 0
+            ? duration.inMilliseconds / 1000
+            : env.length / envRate;
     return List.generate(bars, (b) {
       final from = (b / bars * seconds * envRate).floor();
       final to = ((b + 1) / bars * seconds * envRate).ceil();
@@ -511,6 +593,9 @@ class Deck extends ChangeNotifier {
   @override
   void dispose() {
     _previewTimer?.cancel();
+    if (_sessionReady) _saveSession();
+    _saveTimer?.cancel();
+    _autosave?.cancel();
     for (final s in _subs) {
       s.cancel();
     }
@@ -527,6 +612,12 @@ class Mixer extends ChangeNotifier {
     b.partner = a;
     a.addListener(b._partnerChanged);
     b.addListener(a._partnerChanged);
+    final saved = Store.loadMixer();
+    crossfader = ((saved?['crossfader'] as num?)?.toDouble() ?? 0.5).clamp(
+      0.0,
+      1.0,
+    );
+    master = ((saved?['master'] as num?)?.toDouble() ?? 1.0).clamp(0.0, 1.0);
     _apply();
   }
 
@@ -539,12 +630,14 @@ class Mixer extends ChangeNotifier {
   void setCrossfader(double v) {
     crossfader = v.clamp(0.0, 1.0);
     _apply();
+    Store.saveMixer(crossfader, master);
     notifyListeners();
   }
 
   void setMaster(double v) {
     master = v.clamp(0.0, 1.0);
     _apply();
+    Store.saveMixer(crossfader, master);
     notifyListeners();
   }
 

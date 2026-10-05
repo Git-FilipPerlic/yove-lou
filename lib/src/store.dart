@@ -24,6 +24,46 @@ class Store {
 
   static void saveTheme(String name) => _p?.setString('theme', name);
 
+  /// Folder the file browser was last in.
+  static String? get lastFolder => _p?.getString('last_folder');
+
+  static void saveLastFolder(String path) => _p?.setString('last_folder', path);
+
+  /// What a deck had loaded (song, position, cues, loop, tempo, volume).
+  static Map<String, dynamic>? loadSession(String deckName) {
+    final raw = _p?.getString('session_$deckName');
+    if (raw == null) return null;
+    try {
+      return jsonDecode(raw) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static void saveSession(String deckName, Map<String, dynamic>? data) {
+    if (data == null) {
+      _p?.remove('session_$deckName');
+    } else {
+      _p?.setString('session_$deckName', jsonEncode(data));
+    }
+  }
+
+  /// Crossfader and master volume.
+  static Map<String, dynamic>? loadMixer() {
+    final raw = _p?.getString('mixer');
+    if (raw == null) return null;
+    try {
+      return jsonDecode(raw) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static void saveMixer(double crossfader, double master) => _p?.setString(
+    'mixer',
+    jsonEncode({'crossfader': crossfader, 'master': master}),
+  );
+
   /// Saved songs for a deck. Files that were deleted since are dropped.
   static List<Track> loadPlaylist(String deckName) {
     final raw = _p?.getStringList('playlist_$deckName') ?? const [];
@@ -43,11 +83,8 @@ class Store {
   }
 
   static void savePlaylist(String deckName, List<Track> tracks) {
-    _p?.setStringList(
-      'playlist_$deckName',
-      [
-        for (final t in tracks) jsonEncode({'path': t.path, 'name': t.name})
-      ],
-    );
+    _p?.setStringList('playlist_$deckName', [
+      for (final t in tracks) jsonEncode({'path': t.path, 'name': t.name}),
+    ]);
   }
 }

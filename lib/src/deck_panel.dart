@@ -10,9 +10,9 @@ import 'zoom_wave.dart';
 
 /// Opens the in-app file browser; picking a song loads it into [deck].
 Future<void> pickTrack(BuildContext context, Deck deck) {
-  return Navigator.of(context).push(
-    MaterialPageRoute(builder: (_) => FileBrowserScreen(deck: deck)),
-  );
+  return Navigator.of(
+    context,
+  ).push(MaterialPageRoute(builder: (_) => FileBrowserScreen(deck: deck)));
 }
 
 /// Long-press ("hold") menu for a deck.
@@ -26,23 +26,38 @@ Future<void> showDeckMenu(BuildContext context, Deck deck) {
       }
 
       final items = <_MenuItem>[
-        _MenuItem(Icons.folder_open_rounded, 'Add songs',
-            () => run(() => pickTrack(context, deck))),
         _MenuItem(
-            Icons.flag_rounded, 'Set cue here', () => run(deck.setCueHere)),
+          Icons.folder_open_rounded,
+          'Add songs',
+          () => run(() => pickTrack(context, deck)),
+        ),
+        _MenuItem(Icons.flag_rounded, 'Set cue', () => run(deck.setCueHere)),
         _MenuItem(
-            Icons.repeat_rounded,
-            deck.hasLoopPoints ? 'Clear loop' : 'Loop in / out',
-            () => run(deck.loopPress)),
-        _MenuItem(Icons.speed_rounded, 'Reset tempo',
-            () => run(() => deck.setTempo(0))),
-        _MenuItem(Icons.grid_view_rounded, 'Clear hot cues',
-            () => run(deck.clearAllHotCues)),
+          Icons.repeat_rounded,
+          deck.hasLoopPoints ? 'Clear loop' : 'Loop in/out',
+          () => run(deck.loopPress),
+        ),
+        _MenuItem(
+          Icons.speed_rounded,
+          'Reset tempo',
+          () => run(() => deck.setTempo(0)),
+        ),
+        _MenuItem(
+          Icons.grid_view_rounded,
+          'Clear cues',
+          () => run(deck.clearAllHotCues),
+        ),
         if (deck.bpm != null) ...[
-          _MenuItem(Icons.looks_two_outlined, 'BPM x2',
-              () => run(() => deck.scaleBpm(2))),
-          _MenuItem(Icons.exposure_neg_1_rounded, 'BPM /2',
-              () => run(() => deck.scaleBpm(0.5))),
+          _MenuItem(
+            Icons.looks_two_outlined,
+            'BPM x2',
+            () => run(() => deck.scaleBpm(2)),
+          ),
+          _MenuItem(
+            Icons.call_split_rounded,
+            'BPM /2',
+            () => run(() => deck.scaleBpm(0.5)),
+          ),
         ],
         _MenuItem(Icons.eject_rounded, 'Eject', () => run(deck.eject)),
       ];
@@ -51,7 +66,8 @@ Future<void> showDeckMenu(BuildContext context, Deck deck) {
         backgroundColor: YL.card,
         insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
         shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(YL.radius)),
+          borderRadius: BorderRadius.circular(YL.radius),
+        ),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: SingleChildScrollView(
@@ -70,7 +86,8 @@ Future<void> showDeckMenu(BuildContext context, Deck deck) {
                   runSpacing: 8,
                   alignment: WrapAlignment.center,
                   children: [
-                    for (final i in items) _MenuTile(item: i, color: deck.color)
+                    for (final i in items)
+                      _MenuTile(item: i, color: deck.color),
                   ],
                 ),
               ],
@@ -110,12 +127,22 @@ class _MenuTile extends StatelessWidget {
             children: [
               Icon(item.icon, color: color, size: 22),
               const SizedBox(height: 4),
-              Text(item.label,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    item.label,
+                    maxLines: 1,
+                    softWrap: false,
+                    style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: YL.ink)),
+                      color: YL.ink,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -138,31 +165,142 @@ class DeckPanel extends StatelessWidget {
       child: ScrewFrame(
         child: AnimatedBuilder(
           animation: deck,
-          builder: (context, _) => Column(
-            children: [
-              _Header(deck: deck),
-              const SizedBox(height: 6),
-              SizedBox(height: 40, child: ZoomWave(deck: deck)),
-              const SizedBox(height: 3),
-              SizedBox(height: 14, child: WaveStrip(deck: deck)),
-              const SizedBox(height: 6),
-              Expanded(
-                child: Row(
-                  children: [
-                    SizedBox(width: 62, child: _TransportButtons(deck: deck)),
-                    const SizedBox(width: 8),
-                    Expanded(child: Center(child: _Jog(deck: deck))),
-                    const SizedBox(width: 6),
-                    SizedBox(width: 34, child: _TempoSlider(deck: deck)),
-                  ],
-                ),
+          builder:
+              (context, _) => Column(
+                children: [
+                  _Header(deck: deck),
+                  const SizedBox(height: 6),
+                  SizedBox(height: 40, child: ZoomWave(deck: deck)),
+                  const SizedBox(height: 3),
+                  SizedBox(height: 14, child: WaveStrip(deck: deck)),
+                  const SizedBox(height: 6),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 62,
+                          child: _TransportButtons(deck: deck),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(child: Center(child: _Jog(deck: deck))),
+                        const SizedBox(width: 6),
+                        SizedBox(width: 34, child: _TempoSlider(deck: deck)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  SizedBox(height: 32, child: _HotCuePads(deck: deck)),
+                ],
               ),
-              const SizedBox(height: 6),
-              SizedBox(height: 32, child: _HotCuePads(deck: deck)),
-            ],
-          ),
         ),
       ),
+    );
+  }
+}
+
+/// One-line text that scrolls to and fro when it is too long for its space,
+/// so the whole song title can be read instead of being cut with "...".
+class _MarqueeText extends StatefulWidget {
+  const _MarqueeText(this.text, {required this.style});
+  final String text;
+  final TextStyle style;
+
+  @override
+  State<_MarqueeText> createState() => _MarqueeTextState();
+}
+
+class _MarqueeTextState extends State<_MarqueeText>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this);
+  double _overflow = 0;
+
+  static const _pause = 1500; // ms standing still at each end
+  static const _speed = 35.0; // px per second
+
+  void _configure(double overflow) {
+    if ((overflow - _overflow).abs() < 0.5) return;
+    _overflow = overflow;
+    if (overflow <= 0) {
+      _c.stop();
+      return;
+    }
+    final move = (overflow / _speed * 1000).round();
+    _c.duration = Duration(milliseconds: 2 * (move + _pause));
+    _c.repeat();
+  }
+
+  /// 0..1 position along the scroll for the controller value.
+  double _offsetFraction(double v) {
+    final move = _overflow / _speed * 1000;
+    final total = 2 * (move + _pause);
+    final ms = v * total;
+    if (ms < _pause) return 0;
+    if (ms < _pause + move) return (ms - _pause) / move;
+    if (ms < 2 * _pause + move) return 1;
+    return 1 - (ms - 2 * _pause - move) / move;
+  }
+
+  @override
+  void didUpdateWidget(_MarqueeText old) {
+    super.didUpdateWidget(old);
+    if (old.text != widget.text) {
+      _overflow = -1; // force re-measure
+      _c.value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, c) {
+        // Measure with the same style the Text will really get (the theme's
+        // line height included), or the strip comes out too short and clips.
+        final tp = TextPainter(
+          text: TextSpan(
+            text: widget.text,
+            style: DefaultTextStyle.of(context).style.merge(widget.style),
+          ),
+          maxLines: 1,
+          textScaler: MediaQuery.textScalerOf(context),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        final overflow = tp.width - c.maxWidth;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _configure(overflow);
+        });
+        final line = Text(
+          widget.text,
+          maxLines: 1,
+          softWrap: false,
+          style: widget.style,
+        );
+        if (overflow <= 0) return SizedBox(height: tp.height, child: line);
+        return SizedBox(
+          height: tp.height,
+          child: ClipRect(
+            child: AnimatedBuilder(
+              animation: _c,
+              builder:
+                  (context, child) => OverflowBox(
+                    alignment: Alignment.centerLeft,
+                    minWidth: 0,
+                    maxWidth: double.infinity,
+                    child: Transform.translate(
+                      offset: Offset(-overflow * _offsetFraction(_c.value), 0),
+                      child: child,
+                    ),
+                  ),
+              child: line,
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -185,21 +323,22 @@ class _Header extends StatelessWidget {
             height: 26,
             alignment: Alignment.center,
             decoration: YL.fill(deck.color, radius: 9),
-            child: Text(deck.name,
-                style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 13)),
+            child: Text(
+              deck.name,
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+              ),
+            ),
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                _MarqueeText(
                   deck.isLoaded ? deck.title : 'NO TRACK',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: YL.grunge ? 11 : 13,
@@ -219,19 +358,20 @@ class _Header extends StatelessWidget {
                                 ? 'BPM --'
                                 : '${deck.liveBpm!.toStringAsFixed(1)} BPM'),
                         style: TextStyle(
-                            fontSize: YL.grunge ? 10 : 11,
-                            color:
-                                deck.liveBpm == null ? YL.inkSoft : deck.color,
-                            fontWeight: FontWeight.w800),
+                          fontSize: YL.grunge ? 10 : 11,
+                          color: deck.liveBpm == null ? YL.inkSoft : deck.color,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                       Text(
                         '  ${tempoPct >= 0 ? '+' : ''}${tempoPct.toStringAsFixed(1)}%'
                         '${deck.syncOn ? '  SYNC' : ''}'
                         '${deck.loopActive ? '  LOOP' : ''}',
                         style: TextStyle(
-                            fontSize: YL.grunge ? 9 : 10,
-                            color: YL.inkSoft,
-                            fontWeight: FontWeight.w600),
+                          fontSize: YL.grunge ? 9 : 10,
+                          color: YL.inkSoft,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
@@ -242,37 +382,50 @@ class _Header extends StatelessWidget {
           // Time readout: an inset amber "LCD" in the grunge look.
           ValueListenableBuilder<Duration>(
             valueListenable: deck.position,
-            builder: (context, pos, _) => Container(
-              padding: YL.grunge
-                  ? const EdgeInsets.symmetric(horizontal: 8, vertical: 3)
-                  : EdgeInsets.zero,
-              decoration: YL.grunge
-                  ? BoxDecoration(
-                      color: YL.plate,
-                      borderRadius: BorderRadius.circular(3),
-                      border: Border.all(color: Colors.black, width: 1.5),
-                    )
-                  : null,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(fmtTime(pos),
-                      style: TextStyle(
+            builder:
+                (context, pos, _) => Container(
+                  padding:
+                      YL.grunge
+                          ? const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          )
+                          : EdgeInsets.zero,
+                  decoration:
+                      YL.grunge
+                          ? BoxDecoration(
+                            color: YL.plate,
+                            borderRadius: BorderRadius.circular(3),
+                            border: Border.all(color: Colors.black, width: 1.5),
+                          )
+                          : null,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        fmtTime(pos),
+                        style: TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 15,
                           color: YL.grunge ? YL.cueOrange : YL.ink,
-                          fontFeatures: [FontFeature.tabularFigures()])),
-                  Text(fmtTime(deck.duration - pos, tenths: false),
-                      style: TextStyle(
+                          fontFeatures: [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      Text(
+                        fmtTime(deck.duration - pos, tenths: false),
+                        style: TextStyle(
                           fontSize: 10,
-                          color: YL.grunge
-                              ? YL.cueOrange.withValues(alpha: 0.55)
-                              : YL.inkSoft,
+                          color:
+                              YL.grunge
+                                  ? YL.cueOrange.withValues(alpha: 0.55)
+                                  : YL.inkSoft,
                           fontWeight: FontWeight.w600,
-                          fontFeatures: [FontFeature.tabularFigures()])),
-                ],
-              ),
-            ),
+                          fontFeatures: [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
           ),
         ],
       ),
@@ -314,9 +467,10 @@ class _TransportButtons extends StatelessWidget {
         const SizedBox(height: 6),
         Expanded(
           child: _PillButton(
-            label: deck.loopActive
-                ? 'LOOP'
-                : (deck.loopIn != null ? 'OUT?' : 'IN'),
+            label:
+                deck.loopActive
+                    ? 'LOOP'
+                    : (deck.loopIn != null ? 'OUT?' : 'IN'),
             color: YL.ink,
             filled: deck.loopActive,
             onTap: deck.loopPress,
@@ -333,10 +487,12 @@ class _TransportButtons extends StatelessWidget {
               if (msg != null) {
                 ScaffoldMessenger.of(context)
                   ..hideCurrentSnackBar()
-                  ..showSnackBar(SnackBar(
-                    content: Text(msg),
-                    duration: const Duration(seconds: 2),
-                  ));
+                  ..showSnackBar(
+                    SnackBar(
+                      content: Text(msg),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
               }
             },
           ),
@@ -384,32 +540,39 @@ class _PillButton extends StatelessWidget {
           onTapUp: onPressEnd == null ? null : (_) => onPressEnd!(),
           onTapCancel: onPressEnd,
           child: Center(
-            child: icon != null
-                ? Icon(icon, color: fg, size: 30)
-                : FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(label!,
+            child:
+                icon != null
+                    ? Icon(icon, color: fg, size: 30)
+                    : FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            label!,
                             style: TextStyle(
-                                color: fg,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 12,
-                                letterSpacing: 0.8)),
-                        if (sub != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 3),
-                            child: Text(sub!.toUpperCase(),
-                                style: TextStyle(
-                                    color: fg,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.6)),
+                              color: fg,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12,
+                              letterSpacing: 0.8,
+                            ),
                           ),
-                      ],
+                          if (sub != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 3),
+                              child: Text(
+                                sub!.toUpperCase(),
+                                style: TextStyle(
+                                  color: fg,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.6,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
           ),
         ),
       ),
@@ -468,39 +631,45 @@ class _JogState extends State<_Jog> {
   @override
   Widget build(BuildContext context) {
     final deck = widget.deck;
-    return LayoutBuilder(builder: (context, c) {
-      final side = math.min(c.maxWidth, c.maxHeight);
-      final size = Size(side, side);
-      return GestureDetector(
-        onLongPress: () => showDeckMenu(context, deck),
-        onPanStart: (d) => _lastAngle = _angle(d.localPosition, size),
-        onPanUpdate: (d) {
-          final a = _angle(d.localPosition, size);
-          var delta = a - (_lastAngle ?? a);
-          if (delta > math.pi) delta -= 2 * math.pi;
-          if (delta < -math.pi) delta += 2 * math.pi;
-          _lastAngle = a;
-          deck.nudge(Duration(
-              milliseconds: (delta / (2 * math.pi) * _msPerTurn).round()));
-        },
-        onPanEnd: (_) => _lastAngle = null,
-        child: SizedBox(
-          width: side,
-          height: side,
-          child: ValueListenableBuilder<Duration>(
-            valueListenable: deck.position,
-            builder: (context, pos, _) => CustomPaint(
-              painter: _JogPainter(
-                angle: pos.inMilliseconds / _msPerTurn * 2 * math.pi,
-                color: deck.color,
-                playing: deck.playing,
-                loaded: deck.isLoaded,
+    return LayoutBuilder(
+      builder: (context, c) {
+        final side = math.min(c.maxWidth, c.maxHeight);
+        final size = Size(side, side);
+        return GestureDetector(
+          onLongPress: () => showDeckMenu(context, deck),
+          onPanStart: (d) => _lastAngle = _angle(d.localPosition, size),
+          onPanUpdate: (d) {
+            final a = _angle(d.localPosition, size);
+            var delta = a - (_lastAngle ?? a);
+            if (delta > math.pi) delta -= 2 * math.pi;
+            if (delta < -math.pi) delta += 2 * math.pi;
+            _lastAngle = a;
+            deck.nudge(
+              Duration(
+                milliseconds: (delta / (2 * math.pi) * _msPerTurn).round(),
               ),
+            );
+          },
+          onPanEnd: (_) => _lastAngle = null,
+          child: SizedBox(
+            width: side,
+            height: side,
+            child: ValueListenableBuilder<Duration>(
+              valueListenable: deck.position,
+              builder:
+                  (context, pos, _) => CustomPaint(
+                    painter: _JogPainter(
+                      angle: pos.inMilliseconds / _msPerTurn * 2 * math.pi,
+                      color: deck.color,
+                      playing: deck.playing,
+                      loaded: deck.isLoaded,
+                    ),
+                  ),
             ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
   }
 }
 
@@ -546,24 +715,29 @@ class _JogPainter extends CustomPainter {
         ..color = playing ? color : YL.line,
     );
     // grooves: a few rings, or dense vinyl-style rings when grunge
-    final groove = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1
-      ..color = YL.line;
+    final groove =
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1
+          ..color = YL.line;
     if (YL.grunge) {
       for (var i = 0; i < 9; i++) {
         canvas.drawCircle(c, r * (0.40 + i * 0.058), groove);
       }
       // machined tick marks around the edge, like a real jog dial
-      final tick = Paint()
-        ..strokeWidth = 1.2
-        ..color = YL.inkSoft.withValues(alpha: 0.7);
+      final tick =
+          Paint()
+            ..strokeWidth = 1.2
+            ..color = YL.inkSoft.withValues(alpha: 0.7);
       for (var i = 0; i < 60; i++) {
         final a = i / 60 * 2 * math.pi;
         final long = i % 5 == 0;
         final dir = Offset(math.cos(a), math.sin(a));
         canvas.drawLine(
-            c + dir * (r - (long ? 12 : 9)), c + dir * (r - 5), tick);
+          c + dir * (r - (long ? 12 : 9)),
+          c + dir * (r - 5),
+          tick,
+        );
       }
     } else {
       for (var i = 1; i <= 3; i++) {
@@ -577,7 +751,10 @@ class _JogPainter extends CustomPainter {
     canvas.rotate(loaded ? angle : 0);
     final label = r * 0.34;
     canvas.drawCircle(
-        Offset.zero, label, Paint()..color = color.withValues(alpha: 0.14));
+      Offset.zero,
+      label,
+      Paint()..color = color.withValues(alpha: 0.14),
+    );
     canvas.drawCircle(Offset.zero, 3, Paint()..color = color);
     canvas.drawLine(
       Offset(0, -label),
@@ -607,28 +784,31 @@ class WaveStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, c) {
-      void seek(double dx) =>
-          deck.seekFraction((dx / c.maxWidth).clamp(0.0, 1.0));
-      return GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: (d) => seek(d.localPosition.dx),
-        onHorizontalDragUpdate: (d) => seek(d.localPosition.dx),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(YL.r(10)),
-          child: ColoredBox(
-            color: YL.bg,
-            child: ValueListenableBuilder<Duration>(
-              valueListenable: deck.position,
-              builder: (context, pos, _) => CustomPaint(
-                size: Size.infinite,
-                painter: _WavePainter(deck: deck, position: pos),
+    return LayoutBuilder(
+      builder: (context, c) {
+        void seek(double dx) =>
+            deck.seekFraction((dx / c.maxWidth).clamp(0.0, 1.0));
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapDown: (d) => seek(d.localPosition.dx),
+          onHorizontalDragUpdate: (d) => seek(d.localPosition.dx),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(YL.r(10)),
+            child: ColoredBox(
+              color: YL.bg,
+              child: ValueListenableBuilder<Duration>(
+                valueListenable: deck.position,
+                builder:
+                    (context, pos, _) => CustomPaint(
+                      size: Size.infinite,
+                      painter: _WavePainter(deck: deck, position: pos),
+                    ),
               ),
             ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
   }
 }
 
@@ -658,8 +838,9 @@ class _WavePainter extends CustomPainter {
       canvas.drawRect(
         Rect.fromLTRB(x(deck.loopIn!), 0, x(deck.loopOut!), size.height),
         Paint()
-          ..color = (deck.loopActive ? deck.color : YL.inkSoft)
-              .withValues(alpha: 0.16),
+          ..color = (deck.loopActive ? deck.color : YL.inkSoft).withValues(
+            alpha: 0.16,
+          ),
       );
     }
 

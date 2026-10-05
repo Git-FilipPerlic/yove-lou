@@ -12,8 +12,10 @@ Future<void> main() async {
   await Store.init();
   // Bring back the saved colour theme, and remember future changes.
   final saved = Store.themeName;
-  YL.palette.value = YL.palettes
-      .firstWhere((p) => p.name == saved, orElse: () => YL.palette.value);
+  YL.palette.value = YL.palettes.firstWhere(
+    (p) => p.name == saved,
+    orElse: () => YL.palette.value,
+  );
   YL.palette.addListener(() => Store.saveTheme(YL.palette.value.name));
   // The app is designed for a phone held horizontally.
   await SystemChrome.setPreferredOrientations(const [
@@ -42,6 +44,8 @@ class _YoveLouAppState extends State<YoveLouApp> {
     super.initState();
     a.restorePlaylist(Store.loadPlaylist(a.name));
     b.restorePlaylist(Store.loadPlaylist(b.name));
+    a.restoreSession();
+    b.restoreSession();
   }
 
   @override
@@ -57,16 +61,18 @@ class _YoveLouAppState extends State<YoveLouApp> {
     // Rebuild the whole app when the colour palette changes.
     return ValueListenableBuilder<YLPalette>(
       valueListenable: YL.palette,
-      builder: (context, palette, _) => MaterialApp(
-        title: 'yove lou',
-        debugShowCheckedModeBanner: false,
-        theme: YL.themeFor(palette),
-        // Worn texture sits on top of every screen in the grunge look.
-        builder: (context, child) => Stack(
-          children: [child!, if (palette.grunge) const GrungeOverlay()],
-        ),
-        home: MixerScreen(a: a, b: b, mixer: mixer),
-      ),
+      builder:
+          (context, palette, _) => MaterialApp(
+            title: 'yove lou',
+            debugShowCheckedModeBanner: false,
+            theme: YL.themeFor(palette),
+            // Worn texture sits on top of every screen in the grunge look.
+            builder:
+                (context, child) => Stack(
+                  children: [child!, if (palette.grunge) const GrungeOverlay()],
+                ),
+            home: MixerScreen(a: a, b: b, mixer: mixer),
+          ),
     );
   }
 }

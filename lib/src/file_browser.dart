@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import 'deck.dart';
+import 'store.dart';
 import 'theme.dart';
 
 const _root = '/storage/emulated/0';
@@ -28,11 +29,46 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> {
   List<Directory> _folders = [];
   List<File> _files = [];
   final Set<String> _selected = {};
+  final Map<String, DateTime> _modified = {};
+  final TextEditingController _query = TextEditingController();
+  bool _searching = false;
+  bool _newestFirst = false;
 
   @override
   void initState() {
     super.initState();
     _requestAccess();
+  }
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
+  }
+
+  /// Folders / songs that match the search box.
+  List<Directory> get _shownFolders =>
+      _folders.where((d) => _matches(d.path)).toList();
+  List<File> get _shownFiles => _files.where((f) => _matches(f.path)).toList();
+
+  bool _matches(String path) {
+    final q = _query.text.trim().toLowerCase();
+    return q.isEmpty || _name(path).toLowerCase().contains(q);
+  }
+
+  void _sortFiles() {
+    if (_newestFirst) {
+      _files.sort(
+        (a, b) => (_modified[b.path] ?? DateTime(0)).compareTo(
+          _modified[a.path] ?? DateTime(0),
+        ),
+      );
+    } else {
+      _files.sort(
+        (a, b) =>
+            _name(a.path).toLowerCase().compareTo(_name(b.path).toLowerCase()),
+      );
+    }
   }
 
   Future<void> _requestAccess() async {
@@ -43,6 +79,13 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> {
     if (!mounted) return;
     _hasAccess = status.isGranted;
     if (_hasAccess) {
+      // Start where you left off last time (if that folder still exists).
+      final last = Store.lastFolder;
+      if (last != null &&
+          (last == _root || last.startsWith('$_root/')) &&
+          Directory(last).existsSync()) {
+        _path = last;
+      }
       await _open(_path);
     } else {
       setState(() => _loading = false);
@@ -67,17 +110,27 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> {
           files.add(e);
         }
       }
-      int byName(FileSystemEntity a, FileSystemEntity b) =>
-          _name(a.path).toLowerCase().compareTo(_name(b.path).toLowerCase());
-      folders.sort(byName);
-      files.sort(byName);
+      folders.sort(
+        (a, b) =>
+            _name(a.path).toLowerCase().compareTo(_name(b.path).toLowerCase()),
+      );
+      _modified.clear();
+      for (final f in files) {
+        try {
+          _modified[f.path] = f.lastModifiedSync();
+        } catch (_) {}
+      }
       if (!mounted) return;
       setState(() {
         _path = path;
         _folders = folders;
         _files = files;
+        _sortFiles();
+        _query.clear();
+        _searching = false;
         _loading = false;
       });
+      Store.saveLastFolder(path);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -97,22 +150,22 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> {
     }
   }
 
-  List<Track> get _selectedTracks => [
-        for (final p in _selected) Track(p, _name(p))
-      ]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+  List<Track> get _selectedTracks =>
+      [for (final p in _selected) Track(p, _name(p))]
+        ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
   void _toggle(File f) => setState(() {
-        if (!_selected.remove(f.path)) _selected.add(f.path);
-      });
+    if (!_selected.remove(f.path)) _selected.add(f.path);
+  });
 
   void _selectAllHere() => setState(() {
-        final all = _files.map((f) => f.path);
-        if (all.every(_selected.contains)) {
-          _selected.removeAll(all);
-        } else {
-          _selected.addAll(all);
-        }
-      });
+    final all = _shownFiles.map((f) => f.path);
+    if (all.every(_selected.contains)) {
+      _selected.removeAll(all);
+    } else {
+      _selected.addAll(all);
+    }
+  });
 
   void _addSelected({required bool loadFirst}) {
     final tracks = _selectedTracks;
@@ -128,7 +181,8 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-            SnackBar(content: Text(msg), duration: const Duration(seconds: 2)));
+          SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
+        );
     }
   }
 
@@ -172,15 +226,34 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> {
           minimum: const EdgeInsets.fromLTRB(12, 8, 12, 8),
           child: Column(
             children: [
-              _Header(
+              _TopBar(
                 color: color,
                 deckName: widget.deck.name,
-                onBack: () =>
-                    _path == _root ? Navigator.of(context).pop() : _up(),
+                onBack:
+                    () => _path == _root ? Navigator.of(context).pop() : _up(),
+                middle:
+                    !_hasAccess
+                        ? const SizedBox()
+                        : _searching
+                        ? _SearchField(
+                          controller: _query,
+                          onChanged: (_) => setState(() {}),
+                        )
+                        : _Breadcrumbs(crumbs: _crumbs, onTap: _open),
+                searching: _searching,
+                newestFirst: _newestFirst,
+                onSearch:
+                    () => setState(() {
+                      _searching = !_searching;
+                      if (!_searching) _query.clear();
+                    }),
+                onSort:
+                    () => setState(() {
+                      _newestFirst = !_newestFirst;
+                      _sortFiles();
+                    }),
               ),
-              const SizedBox(height: 10),
-              if (_hasAccess) _Breadcrumbs(crumbs: _crumbs, onTap: _open),
-              const SizedBox(height: 10),
+              const SizedBox(height: 6),
               Expanded(child: _body(color)),
             ],
           ),
@@ -208,27 +281,40 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> {
     }
     if (_error != null) {
       return _Card(
-          child: _Message(icon: Icons.error_outline_rounded, text: _error!));
+        child: _Message(icon: Icons.error_outline_rounded, text: _error!),
+      );
     }
     if (_folders.isEmpty && _files.isEmpty) {
       return const _Card(
-          child: _Message(
-              icon: Icons.folder_off_outlined,
-              text: 'No songs or folders here'));
+        child: _Message(
+          icon: Icons.folder_off_outlined,
+          text: 'No songs or folders here',
+        ),
+      );
+    }
+    final folders = _shownFolders;
+    final files = _shownFiles;
+    if (folders.isEmpty && files.isEmpty) {
+      return _Card(
+        child: _Message(
+          icon: Icons.search_off_rounded,
+          text: 'Nothing matches "${_query.text.trim()}"',
+        ),
+      );
     }
     final list = _Card(
       child: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(vertical: 2),
         children: [
-          for (final d in _folders)
+          for (final d in folders)
             _Row(
               icon: Icons.folder_rounded,
               iconColor: YL.inkSoft,
               title: _name(d.path),
-              subtitle: 'Folder',
+              subtitle: '',
               onTap: () => _open(d.path),
             ),
-          for (final f in _files)
+          for (final f in files)
             _Row(
               icon: Icons.music_note_rounded,
               iconColor: color,
@@ -244,14 +330,15 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> {
     return Column(
       children: [
         Expanded(child: list),
-        if (_files.isNotEmpty || _selected.isNotEmpty) ...[
-          const SizedBox(height: 8),
+        if (files.isNotEmpty || _selected.isNotEmpty) ...[
+          const SizedBox(height: 6),
           _SelectBar(
             deckName: widget.deck.name,
             color: color,
             count: _selected.length,
-            allHere: _files.isNotEmpty &&
-                _files.every((f) => _selected.contains(f.path)),
+            allHere:
+                files.isNotEmpty &&
+                files.every((f) => _selected.contains(f.path)),
             onSelectAll: _selectAllHere,
             onAdd: () => _addSelected(loadFirst: false),
             onAddLoad: () => _addSelected(loadFirst: true),
@@ -262,40 +349,99 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> {
   }
 }
 
-class _Header extends StatelessWidget {
-  const _Header(
-      {required this.color, required this.deckName, required this.onBack});
+/// One compact top row: back, deck chip, path (or search box), search, sort.
+class _TopBar extends StatelessWidget {
+  const _TopBar({
+    required this.color,
+    required this.deckName,
+    required this.onBack,
+    required this.middle,
+    required this.searching,
+    required this.newestFirst,
+    required this.onSearch,
+    required this.onSort,
+  });
 
   final Color color;
   final String deckName;
   final VoidCallback onBack;
+  final Widget middle;
+  final bool searching;
+  final bool newestFirst;
+  final VoidCallback onSearch;
+  final VoidCallback onSort;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
         _RoundButton(icon: Icons.arrow_back_rounded, onTap: onBack),
-        const SizedBox(width: 12),
+        const SizedBox(width: 8),
         Container(
           width: 26,
           height: 26,
           alignment: Alignment.center,
           decoration: YL.fill(color, radius: 9),
-          child: Text(deckName,
-              style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13)),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
           child: Text(
-            'Add songs to deck $deckName',
+            deckName,
             style: TextStyle(
-                fontWeight: FontWeight.w800, fontSize: 15, color: YL.ink),
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 13,
+            ),
           ),
         ),
+        const SizedBox(width: 8),
+        Expanded(child: middle),
+        const SizedBox(width: 8),
+        _RoundButton(
+          icon:
+              newestFirst
+                  ? Icons.schedule_rounded
+                  : Icons.sort_by_alpha_rounded,
+          onTap: onSort,
+        ),
+        const SizedBox(width: 8),
+        _RoundButton(
+          icon: searching ? Icons.close_rounded : Icons.search_rounded,
+          onTap: onSearch,
+        ),
       ],
+    );
+  }
+}
+
+class _SearchField extends StatelessWidget {
+  const _SearchField({required this.controller, required this.onChanged});
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 36,
+      child: TextField(
+        controller: controller,
+        onChanged: onChanged,
+        autofocus: true,
+        style: TextStyle(fontSize: 13, color: YL.ink),
+        decoration: InputDecoration(
+          isDense: true,
+          hintText: 'Search this folder',
+          hintStyle: TextStyle(fontSize: 13, color: YL.inkSoft),
+          filled: true,
+          fillColor: YL.card,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 8,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(YL.r(10)),
+            borderSide: BorderSide.none,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -310,34 +456,53 @@ class _Breadcrumbs extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: 36,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: [
-          for (var i = 0; i < crumbs.length; i++) ...[
-            if (i > 0)
-              Icon(Icons.chevron_right_rounded, size: 18, color: YL.inkSoft),
-            InkWell(
-              borderRadius: BorderRadius.circular(YL.r(10)),
-              onTap: () => onTap(crumbs[i].$2),
-              child: Container(
-                alignment: Alignment.center,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                decoration: BoxDecoration(
-                  color: i == crumbs.length - 1 ? YL.card : Colors.transparent,
-                  borderRadius: BorderRadius.circular(YL.r(10)),
-                ),
-                child: Text(
-                  crumbs[i].$1,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: i == crumbs.length - 1 ? YL.ink : YL.inkSoft,
-                  ),
+      // reverse: starts scrolled to the end, so the current folder is visible;
+      // the minWidth keeps a short path on the left instead of the right.
+      child: LayoutBuilder(
+        builder:
+            (context, c) => SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              reverse: true,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: c.maxWidth),
+                child: Row(
+                  children: [
+                    for (var i = 0; i < crumbs.length; i++) ...[
+                      if (i > 0)
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          size: 18,
+                          color: YL.inkSoft,
+                        ),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(YL.r(10)),
+                        onTap: () => onTap(crumbs[i].$2),
+                        child: Container(
+                          alignment: Alignment.center,
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          decoration: BoxDecoration(
+                            color:
+                                i == crumbs.length - 1
+                                    ? YL.card
+                                    : Colors.transparent,
+                            borderRadius: BorderRadius.circular(YL.r(10)),
+                          ),
+                          child: Text(
+                            crumbs[i].$1,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color:
+                                  i == crumbs.length - 1 ? YL.ink : YL.inkSoft,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),
-          ],
-        ],
       ),
     );
   }
@@ -389,34 +554,38 @@ class _Row extends StatelessWidget {
       onTap: onTap,
       onLongPress: onLongPress,
       child: Container(
-        height: 56,
+        height: 42,
         color: selected == true ? iconColor.withValues(alpha: 0.12) : null,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),
           child: Row(
             children: [
-              Icon(icon, color: iconColor, size: 24),
-              const SizedBox(width: 14),
+              Icon(icon, color: iconColor, size: 22),
+              const SizedBox(width: 12),
               Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                            color: YL.ink)),
-                    Text(subtitle,
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: YL.inkSoft)),
-                  ],
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: YL.ink,
+                  ),
                 ),
               ),
+              if (subtitle.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: YL.inkSoft,
+                  ),
+                ),
+                const SizedBox(width: 10),
+              ],
               if (selected == null)
                 Icon(Icons.chevron_right_rounded, color: YL.line)
               else
@@ -435,8 +604,12 @@ class _Row extends StatelessWidget {
 }
 
 class _Message extends StatelessWidget {
-  const _Message(
-      {required this.icon, required this.text, this.action, this.onAction});
+  const _Message({
+    required this.icon,
+    required this.text,
+    this.action,
+    this.onAction,
+  });
 
   final IconData icon;
   final String text;
@@ -453,9 +626,11 @@ class _Message extends StatelessWidget {
           children: [
             Icon(icon, size: 40, color: YL.inkSoft),
             const SizedBox(height: 10),
-            Text(text,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: YL.ink, fontWeight: FontWeight.w600)),
+            Text(
+              text,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: YL.ink, fontWeight: FontWeight.w600),
+            ),
             if (action != null) ...[
               const SizedBox(height: 14),
               FilledButton(onPressed: onAction, child: Text(action!)),
@@ -485,8 +660,10 @@ class _RoundButton extends StatelessWidget {
         child: Container(
           width: 40,
           height: 40,
-          decoration:
-              BoxDecoration(shape: BoxShape.circle, boxShadow: YL.shadow),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            boxShadow: YL.shadow,
+          ),
           child: Icon(icon, color: YL.ink),
         ),
       ),
@@ -519,13 +696,17 @@ class _SelectBar extends StatelessWidget {
     final has = count > 0;
     return Row(
       children: [
-        TextButton(
+        TextButton.icon(
           onPressed: onSelectAll,
-          child: Text(allHere ? 'Clear folder' : 'Select all'),
+          icon: Icon(
+            allHere ? Icons.deselect_rounded : Icons.select_all_rounded,
+            size: 18,
+          ),
+          label: Text(allHere ? 'None' : 'All'),
         ),
         Expanded(
           child: Text(
-            has ? '$count selected' : 'Tap = select  -  hold = load now',
+            has ? '$count ticked' : 'Tap = tick  -  hold = load now',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
@@ -537,16 +718,18 @@ class _SelectBar extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         _BarButton(
-            label: 'ADD TO $deckName',
-            color: color,
-            filled: false,
-            onTap: has ? onAdd : null),
+          label: 'ADD TO $deckName',
+          color: color,
+          filled: false,
+          onTap: has ? onAdd : null,
+        ),
         const SizedBox(width: 8),
         _BarButton(
-            label: 'ADD + LOAD',
-            color: color,
-            filled: true,
-            onTap: has ? onAddLoad : null),
+          label: 'ADD + LOAD',
+          color: color,
+          filled: true,
+          onTap: has ? onAddLoad : null,
+        ),
       ],
     );
   }
