@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'bpm.dart';
 import 'deck.dart';
 import 'file_browser.dart';
 import 'grunge.dart';
@@ -572,6 +573,18 @@ class _TrackRow extends StatelessWidget {
                 ),
               ),
             ),
+            if (Bpm.cachedBpm(track.path) case final bpm?)
+              Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: Text(
+                  (bpm * Store.bpmScale(track.path)).round().toString(),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: YL.inkSoft,
+                  ),
+                ),
+              ),
             if (!current)
               IconButton(
                 tooltip: 'Play next',

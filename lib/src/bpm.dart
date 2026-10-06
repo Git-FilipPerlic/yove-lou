@@ -38,6 +38,25 @@ class Bpm {
     return fresh;
   }
 
+  static final _seen = <String, double?>{};
+
+  /// Tempo of a song that was analysed before, or null (nothing is analysed
+  /// here — it only looks at the small cache file). Used by the playlists.
+  static double? cachedBpm(String path) {
+    final known = _seen[path];
+    if (known != null) return known;
+    try {
+      final meta = _cacheBase(path, 'json');
+      if (meta == null || !meta.existsSync()) return null;
+      final m = jsonDecode(meta.readAsStringSync()) as Map<String, dynamic>;
+      final v = (m['bpm'] as num?)?.toDouble();
+      if (v != null) _seen[path] = v;
+      return v;
+    } catch (_) {
+      return null;
+    }
+  }
+
   // ------------------------------------------------------------------ cache
   // Two small files per song in the app cache folder: <key>.json (tempo,
   // first beat, rate) and <key>.env (loudness curve, one byte per value).
