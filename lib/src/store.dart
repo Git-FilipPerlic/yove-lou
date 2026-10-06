@@ -48,6 +48,13 @@ class Store {
     }
   }
 
+  /// "Auto next": when a song ends, load and play the next one.
+  static bool autoNext(String deckName) =>
+      _p?.getBool('autonext_$deckName') ?? false;
+
+  static void saveAutoNext(String deckName, bool on) =>
+      _p?.setBool('autonext_$deckName', on);
+
   /// Crossfader and master volume.
   static Map<String, dynamic>? loadMixer() {
     final raw = _p?.getString('mixer');

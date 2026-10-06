@@ -22,8 +22,11 @@ class Deck extends ChangeNotifier {
           _player.pause();
           final next = (currentIndex ?? -1) + 1;
           if (currentIndex != null && next < playlist.length) {
-            // Queue advances: next song is loaded and cued, ready to play.
-            loadPath(playlist[next].path, playlist[next].name);
+            // Queue advances: next song is loaded and cued, ready to play
+            // (or played right away when auto next is on).
+            loadPath(playlist[next].path, playlist[next].name).then((err) {
+              if (err == null && autoNext) _player.play();
+            });
           } else {
             _player.seek(Duration.zero);
           }
@@ -105,6 +108,15 @@ class Deck extends ChangeNotifier {
 
   bool get isLoaded => path != null;
   bool get playing => _player.playing;
+
+  /// When a song ends, the next one in the playlist starts by itself.
+  late bool autoNext = Store.autoNext(name);
+
+  void toggleAutoNext() {
+    autoNext = !autoNext;
+    Store.saveAutoNext(name, autoNext);
+    notifyListeners();
+  }
   bool get hasLoopPoints => loopIn != null && loopOut != null;
 
   // ---------------------------------------------------------------- session

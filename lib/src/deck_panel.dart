@@ -59,6 +59,13 @@ Future<void> showDeckMenu(BuildContext context, Deck deck) {
             () => run(() => deck.scaleBpm(0.5)),
           ),
         ],
+        _MenuItem(
+          deck.autoNext
+              ? Icons.playlist_play_rounded
+              : Icons.playlist_remove_rounded,
+          deck.autoNext ? 'Auto next: on' : 'Auto next: off',
+          () => run(deck.toggleAutoNext),
+        ),
         _MenuItem(Icons.eject_rounded, 'Eject', () => run(deck.eject)),
       ];
 
